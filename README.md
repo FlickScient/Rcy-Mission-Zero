@@ -42,7 +42,7 @@ psql "$DATABASE_URL" -f server/schema.sql
 npm run api:dev
 ```
 
-The API listens on port 3001 by default. Set `VITE_API_BASE_URL=http://localhost:3001` in a frontend `.env.local` if/when the frontend is switched to use the API.
+The API listens on port 3001 by default. The mission screen submits decisions to the API when `VITE_API_BASE_URL=http://localhost:3001` is set in the frontend environment. Without that variable, it runs in clearly labelled local demo mode.
 
 ## API routes
 
