@@ -23,6 +23,10 @@ Register the intended account, retrieve its UUID from the users table, then use 
 ## API
 GET /health, /api/missions; POST /api/auth/register, /api/auth/login; GET /api/me; POST /api/missions/:id/attempts; GET /api/daily; POST /api/daily/attempts; POST /api/command/attempts; GET /api/seasons; GET /api/leaderboard?period=weekly|monthly|season|all-time. Admin: POST /api/admin/bootstrap; GET /api/admin/overview, /api/admin/users, /api/admin/seasons and /api/admin/attempts; POST /api/admin/seasons; PATCH /api/admin/users/:id/verification and /api/admin/attempts/:id/review.
 
+## Vercel deployment
+
+The root `index.mjs` exports the Express app for Vercel. The Vite build writes the frontend into `public/`, which Vercel serves through its CDN alongside the Express function. Configure the Vercel project with the Express framework preset, Node.js 22.x, and `npm run build`; do not set an output directory of `dist`. Use the pooled Neon PostgreSQL connection string and keep `DATABASE_URL`, `JWT_SECRET`, and `ADMIN_BOOTSTRAP_KEY` as encrypted environment variables. Set `DATABASE_SSL=true` and `TRUST_PROXY=true` on Vercel. Same-origin requests are allowed; configure `CLIENT_ORIGIN` only for any additional trusted frontend origin.
+
 ## Fair play and deployment
 Scores are server-calculated. XP is awarded only when best results improve; daily completion is unique per account/day. Weekly ranking currently aggregates recorded weekly mission scores. In-process rate limiting is only a baseline. Public competition still needs shared rate limiting, stronger identity verification, moderation, monitoring, backups, security review and load testing. Production requires owner-controlled frontend/API hosting, managed PostgreSQL, TLS, secrets, exact CORS origins, schema application and smoke tests. No hosting credentials are included.
 
