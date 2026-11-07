@@ -2,32 +2,69 @@
 
 **Think Fast. Act Smart. Save Lives.**
 
-A standalone learning-game prototype for Red Crescent Youth, Chatkhil. This repository is intentionally separate from the existing RCY community website.
+A standalone learning-game project for Red Crescent Youth, Chatkhil. This repository is intentionally separate from the existing RCY community website.
 
 ## Current build
 
-- Responsive landing page with Mission Zero visual identity
-- One playable, scenario-based Mission Mode demo
-- Decision feedback focused on scene safety
-- Command Mode and leaderboard shown as clearly labelled future features
+- Responsive Mission Zero landing page and visual identity
+- Playable Mission Mode scenario prototype
+- Standalone Express API with a mission catalogue endpoint
+- Server-side decision evaluation and score calculation
+- PostgreSQL attempt persistence with duplicate-attempt protection
+- Basic API hardening: Helmet headers, CORS allow-list, JSON size limit and rate limiting
+- Command Mode, accounts, admin tools and competitive leaderboard are not implemented yet
 
-## Run locally
+## Requirements
+
+- Node.js 20+
+- PostgreSQL 14+ (for saving attempts)
+
+## Run the frontend
 
 ```bash
 npm install
 npm run dev
 ```
 
-Build for production:
+## Run the API
+
+1. Create a PostgreSQL database.
+2. Copy `.env.example` to `.env` and set `DATABASE_URL`.
+3. Apply the schema once:
 
 ```bash
-npm run build
-npm run preview
+psql "$DATABASE_URL" -f server/schema.sql
 ```
 
-## Project status
+4. Start the API:
 
-This is an early frontend prototype. It does **not** yet include player accounts, a backend, database persistence, real leaderboards, admin tools, multiplayer, or verified RCY membership. Demo decisions and outcomes are illustrative and are not saved.
+```bash
+npm run api:dev
+```
+
+The API listens on port 3001 by default. Set `VITE_API_BASE_URL=http://localhost:3001` in a frontend `.env.local` if/when the frontend is switched to use the API.
+
+## API routes
+
+- `GET /health` — process and database readiness
+- `GET /api/missions` — published demo mission catalogue
+- `GET /api/missions/:missionId` — one mission briefing and its choices
+- `POST /api/missions/:missionId/attempts` — validate a choice and calculate its result on the server
+
+Attempt request:
+
+```json
+{
+  "attemptId": "a-valid-uuid",
+  "choiceId": "secure"
+}
+```
+
+The API computes the score; it never trusts a score supplied by the browser. A repeated attempt ID is rejected. Attempts are currently anonymous and are not eligible for a public leaderboard.
+
+## Important limitations
+
+This is an early development foundation, not a production competition platform. There is no player authentication, account ownership, admin authorization, multi-instance rate-limit store, or leaderboard. Do not publish competitive rankings until authenticated player identity, abuse controls, review workflows and server-side validation are in place. The in-memory rate limiter is per process.
 
 ## Safety and educational scope
 
@@ -35,4 +72,4 @@ Mission Zero is a learning-game concept, not a substitute for certified first-ai
 
 ## Architecture direction
 
-Keep this game independent from the existing RCY community website. Future integration should use a controlled link or documented API rather than coupling the two frontends. Scoring, attempt validation, rate limiting, and leaderboard updates must be server-authoritative before competitive features launch.
+Keep this game independent from the existing RCY community website. Future integration should use a controlled link or documented API rather than coupling the two frontends.
