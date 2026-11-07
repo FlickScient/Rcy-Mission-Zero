@@ -15,3 +15,14 @@ CREATE TABLE IF NOT EXISTS achievements(id TEXT PRIMARY KEY,title TEXT,descripti
 CREATE TABLE IF NOT EXISTS user_achievements(user_id UUID REFERENCES users(id) ON DELETE CASCADE,achievement_id TEXT REFERENCES achievements(id),earned_at TIMESTAMPTZ DEFAULT NOW(),PRIMARY KEY(user_id,achievement_id));
 INSERT INTO achievements VALUES('first','First Response','Complete your first mission.',25),('perfect','Perfect Response','Earn a 100-point result.',50),('explorer','Field Explorer','Complete three missions.',75),('commander','Command Ready','Score at least 76 in Command Mode.',50),('daily','Daily Discipline','Complete a daily challenge.',25) ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS admin_audit(id BIGSERIAL PRIMARY KEY,admin_id UUID REFERENCES users(id),action TEXT NOT NULL,details JSONB DEFAULT '{}'::jsonb,created_at TIMESTAMPTZ DEFAULT NOW());
+
+CREATE TABLE IF NOT EXISTS competition_seasons(
+ id BIGSERIAL PRIMARY KEY,
+ name TEXT NOT NULL UNIQUE CHECK(char_length(name) BETWEEN 3 AND 60),
+ starts_at TIMESTAMPTZ NOT NULL,
+ ends_at TIMESTAMPTZ NOT NULL,
+ created_by UUID REFERENCES users(id),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ CHECK(ends_at>starts_at)
+);
+CREATE INDEX IF NOT EXISTS competition_seasons_dates ON competition_seasons(starts_at,ends_at);
