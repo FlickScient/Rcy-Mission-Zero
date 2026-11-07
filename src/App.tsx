@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowDownRight, ArrowLeft, ArrowRight, Award, Check, ChevronRight, Crosshair, HeartPulse, Menu, Shield, ShieldAlert, Sparkles, Timer, Trophy, Users, X } from "lucide-react";
+import { ArrowDownRight, ArrowLeft, ArrowRight, Award, Check, Crosshair, HeartPulse, Menu, Shield, ShieldAlert, Timer, Trophy, Users, X } from "lucide-react";
 
 type Choice = { id: string; title: string; detail: string; safe: boolean };
 type Mission = { code: string; title: string; location: string; brief: string; hazard: string; choices: Choice[]; explanation: string };
