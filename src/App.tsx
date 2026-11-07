@@ -2,9 +2,10 @@ import { useState } from "react";
 import { ArrowDownRight, ArrowLeft, ArrowRight, Award, Check, Crosshair, HeartPulse, Menu, Shield, ShieldAlert, Timer, Trophy, Users, X } from "lucide-react";
 
 type Choice = { id: string; title: string; detail: string; safe: boolean };
-type Mission = { code: string; title: string; location: string; brief: string; hazard: string; choices: Choice[]; explanation: string };
+type Mission = { id: string; code: string; title: string; location: string; brief: string; hazard: string; choices: Choice[]; explanation: string };
 
 const missions: Mission[] = [{
+  id: "roadside-collision-001",
   code: "FIELD SCENARIO 001",
   title: "The Roadside Collision",
   location: "URBAN RESPONSE · LEVEL 01",
@@ -18,19 +19,52 @@ const missions: Mission[] = [{
   explanation: "Good response starts with scene safety. A damaged electrical pole or downed line can create a serious hazard. Keep people away, do not touch the pole or wires, and contact the relevant emergency services and utility authority. Only approach when the scene is confirmed safe."
 }];
 
+type AttemptResult = { correct: boolean; score: number; title: string; explanation: string; takeaway: string };
+
 function App() {
   const [missionOpen, setMissionOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [serverResult, setServerResult] = useState<AttemptResult | null>(null);
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\\/$/, "");
   const mission = missions[0];
   const choice = mission.choices.find((item) => item.id === selected);
 
   const startMission = () => {
     setSelected(null);
     setFinished(false);
+    setServerResult(null);
+    setSubmitError(null);
     setMissionOpen(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const submitDecision = async () => {
+    if (!selected || submitting) return;
+    setSubmitError(null);
+    if (!apiBaseUrl) {
+      setFinished(true);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/missions/${mission.id}/attempts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attemptId: crypto.randomUUID(), choiceId: selected })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not submit this decision.");
+      setServerResult(data as AttemptResult);
+      setFinished(true);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Network error. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (missionOpen) return (
@@ -57,13 +91,15 @@ function App() {
               <span className="choice-index">0{index + 1}</span><span className="choice-copy"><b>{item.title}</b><small>{item.detail}</small></span><span className="choice-radio">{selected === item.id && <Check size={14} />}</span>
             </button>)}
           </div>
-          <button className="primary-button submit-button" disabled={!selected} onClick={() => setFinished(true)}>CONFIRM DECISION <ArrowRight size={17} /></button>
+          <button className="primary-button submit-button" disabled={!selected || submitting} onClick={submitDecision}>{submitting ? "SUBMITTING..." : "CONFIRM DECISION"} <ArrowRight size={17} /></button>
+          {submitError && <p className="submit-error" role="alert">{submitError}</p>}
         </> : <div className="feedback-card">
-          <div className={choice?.safe ? "feedback-icon good" : "feedback-icon"}>{choice?.safe ? <Check size={24} /> : <ShieldAlert size={24} />}</div>
+          <div className={(serverResult?.correct ?? choice?.safe) ? "feedback-icon good" : "feedback-icon"}>{(serverResult?.correct ?? choice?.safe) ? <Check size={24} /> : <ShieldAlert size={24} />}</div>
           <span className="section-kicker">SCENARIO DEBRIEF</span>
-          <h2>{choice?.safe ? "Good call." : "That decision adds risk."}</h2>
-          <p>{mission.explanation}</p>
-          <div className="learning-note"><b>KEY TAKEAWAY</b><span>Scene safety comes before direct assistance. Never approach downed electrical equipment or wires.</span></div>
+          <h2>{serverResult?.title ?? (choice?.safe ? "Good call." : "That decision adds risk.")}</h2>
+          {serverResult && <span className="section-kicker">SERVER-VERIFIED DEMO SCORE: {serverResult.score} / 100</span>}
+          <p>{serverResult?.explanation ?? mission.explanation}</p>
+          <div className="learning-note"><b>KEY TAKEAWAY</b><span>{serverResult?.takeaway ?? "Scene safety comes before direct assistance. Never approach downed electrical equipment or wires."}</span></div>
           <button className="primary-button" onClick={startMission}>REPLAY SCENARIO <ArrowRight size={17} /></button>
         </div>}
         <p className="simulation-note">DEMO SCENARIO · NOT A CERTIFIED FIRST-AID COURSE OR OFFICIAL RCY ASSESSMENT</p>
