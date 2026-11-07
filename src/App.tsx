@@ -29,7 +29,7 @@ function App() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [serverResult, setServerResult] = useState<AttemptResult | null>(null);
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\\/$/, "");
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
   const mission = missions[0];
   const choice = mission.choices.find((item) => item.id === selected);
 
