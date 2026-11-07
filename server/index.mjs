@@ -4,7 +4,6 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pg from "pg";
-import { validate as isUuid } from "uuid";
 import { evaluateChoice, findMission, missions, publicMission } from "./missions.mjs";
 
 const { Pool } = pg;
@@ -61,7 +60,7 @@ app.post("/api/missions/:missionId/attempts", attemptLimiter, async (req, res) =
   if (!pool) return res.status(503).json({ error: "Attempt storage is not configured yet." });
 
   const { attemptId, choiceId } = req.body ?? {};
-  if (typeof attemptId !== "string" || !isUuid(attemptId)) {
+  if (typeof attemptId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(attemptId)) {
     return res.status(400).json({ error: "attemptId must be a valid UUID." });
   }
   if (typeof choiceId !== "string" || choiceId.length > 40) {
