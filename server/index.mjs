@@ -1,117 +1,25 @@
-import "dotenv/config";
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
-import pg from "pg";
-import { evaluateChoice, findMission, missions, publicMission } from "./missions.mjs";
-
-const { Pool } = pg;
-const app = express();
-const port = Number(process.env.PORT || 3001);
-const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL }) : null;
-
-if (process.env.TRUST_PROXY === "true") app.set("trust proxy", 1);
-
-const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:5173")
-  .split(",").map((origin) => origin.trim()).filter(Boolean);
-
-app.disable("x-powered-by");
-app.use(helmet());
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error("Origin not allowed by CORS"));
-  },
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"]
-}));
-app.use(express.json({ limit: "10kb", strict: true }));
-
-const attemptLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 10,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: { error: "Too many attempts. Please wait before trying again." }
-});
-
-app.get("/health", async (_req, res) => {
-  if (!pool) return res.status(503).json({ status: "degraded", database: "not_configured" });
-  try {
-    await pool.query("SELECT 1");
-    return res.json({ status: "ok", database: "connected" });
-  } catch {
-    return res.status(503).json({ status: "degraded", database: "unavailable" });
-  }
-});
-
-app.get("/api/missions", (_req, res) => {
-  res.json({ missions: missions.map(publicMission) });
-});
-
-app.get("/api/missions/:missionId", (req, res) => {
-  const mission = findMission(req.params.missionId);
-  if (!mission) return res.status(404).json({ error: "Mission not found." });
-  return res.json({ mission: publicMission(mission) });
-});
-
-app.post("/api/missions/:missionId/attempts", attemptLimiter, async (req, res) => {
-  if (!pool) return res.status(503).json({ error: "Attempt storage is not configured yet." });
-
-  const { attemptId, choiceId } = req.body ?? {};
-  if (typeof attemptId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(attemptId)) {
-    return res.status(400).json({ error: "attemptId must be a valid UUID." });
-  }
-  if (typeof choiceId !== "string" || choiceId.length > 40) {
-    return res.status(400).json({ error: "A valid choiceId is required." });
-  }
-
-  const mission = findMission(req.params.missionId);
-  if (!mission) return res.status(404).json({ error: "Mission not found." });
-  const result = evaluateChoice(mission, choiceId);
-  if (!result) return res.status(400).json({ error: "That choice is not part of this mission." });
-
-  try {
-    await pool.query(
-      `INSERT INTO mission_attempts (attempt_id, mission_id, choice_id, score, correct)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [attemptId, mission.id, choiceId, result.score, result.correct]
-    );
-    return res.status(201).json({
-      attemptId,
-      missionId: mission.id,
-      choiceId,
-      score: result.score,
-      correct: result.correct,
-      title: result.title,
-      explanation: result.explanation,
-      takeaway: result.takeaway
-    });
-  } catch (error) {
-    if (error?.code === "23505") {
-      return res.status(409).json({ error: "This attempt has already been submitted." });
-    }
-    console.error("Attempt persistence failed:", error?.message || "unknown error");
-    return res.status(500).json({ error: "Could not save this attempt. Please try again." });
-  }
-});
-
-app.use((error, _req, res, _next) => {
-  if (error?.type === "entity.too.large") return res.status(413).json({ error: "Request body is too large." });
-  if (error instanceof SyntaxError && "body" in error) return res.status(400).json({ error: "Invalid JSON body." });
-  if (error?.message === "Origin not allowed by CORS") return res.status(403).json({ error: "Origin not allowed." });
-  console.error("Unhandled API error:", error?.message || "unknown error");
-  return res.status(500).json({ error: "Unexpected server error." });
-});
-
-const server = app.listen(port, () => {
-  console.log(`Mission Zero API listening on port ${port}`);
-});
-
-async function shutdown() {
-  server.close();
-  if (pool) await pool.end();
-}
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+import"dotenv/config";import express from"express";import cors from"cors";import helmet from"helmet";import rateLimit from"express-rate-limit";import pg from"pg";import bcrypt from"bcryptjs";import jwt from"jsonwebtoken";import{missions,findMission,publicMission,evaluateChoice,evaluateCommand}from"./missions.mjs";
+const app=express(),{Pool}=pg,db=process.env.DATABASE_URL?new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DATABASE_SSL==="true"?{rejectUnauthorized:false}:undefined,max:10}):null,secret=process.env.JWT_SECRET,port=Number(process.env.PORT||3001);
+if(process.env.TRUST_PROXY==="true")app.set("trust proxy",1);app.disable("x-powered-by");app.use(helmet());app.use(cors({origin(o,cb){if(!o||(process.env.CLIENT_ORIGIN||"http://localhost:5173").split(",").map(x=>x.trim()).includes(o))return cb(null,true);cb(Error("Origin not allowed"));},methods:["GET","POST","PATCH"],allowedHeaders:["Content-Type","Authorization","X-Admin-Bootstrap-Key"]}));app.use(express.json({limit:"12kb"}));
+const limiter=rateLimit({windowMs:60000,limit:12,standardHeaders:"draft-7",legacyHeaders:false}),authLimiter=rateLimit({windowMs:900000,limit:10,standardHeaders:"draft-7",legacyHeaders:false}),ready=(q,s,n)=>db?n():s.status(503).json({error:"Database is not configured."});
+const sign=u=>{if(!secret||secret.length<32)throw Error("JWT_SECRET must be at least 32 characters.");return jwt.sign({sub:u.id},secret,{expiresIn:"7d",issuer:"mission-zero"});};
+async function auth(q,s,n){try{if(!db||!secret||secret.length<32)return s.status(503).json({error:"Authentication is not configured."});const p=jwt.verify(q.headers.authorization?.replace(/^Bearer /,""),secret,{issuer:"mission-zero"}),r=await db.query("SELECT id,username,email,role,xp,created_at FROM users WHERE id=$1",[p.sub]);if(!r.rowCount)return s.status(401).json({error:"Account not found."});q.user=r.rows[0];n();}catch{return s.status(401).json({error:"Please sign in again."});}}
+const admin=(q,s,n)=>q.user.role==="admin"?n():s.status(403).json({error:"Admin access required."});
+async function badge(c,u,id){const r=await c.query("INSERT INTO user_achievements(user_id,achievement_id) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING achievement_id",[u,id]);if(!r.rowCount)return 0;const a=await c.query("SELECT xp FROM achievements WHERE id=$1",[id]),x=a.rows[0]?.xp||0;if(x)await c.query("UPDATE users SET xp=xp+$2 WHERE id=$1",[u,x]);return x;}
+const day=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Dhaka",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()),daily=()=>missions[Math.floor(Date.parse(day()+"T00:00:00Z")/86400000)%missions.length];
+app.get("/health",async(q,s)=>{if(!db)return s.status(503).json({status:"degraded"});try{await db.query("SELECT 1");s.json({status:"ok",database:"connected"});}catch{s.status(503).json({status:"degraded"});}});
+app.get("/api/missions",(q,s)=>s.json({missions:missions.map(publicMission)}));
+app.post("/api/auth/register",ready,authLimiter,async(q,s)=>{const{username,email,password}=q.body||{};if(typeof username!=="string"||!/^[a-zA-Z0-9_]{3,24}$/.test(username))return s.status(400).json({error:"Username must be 3–24 letters, numbers or underscores."});if(typeof email!=="string"||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return s.status(400).json({error:"Enter a valid email."});if(typeof password!=="string"||password.length<10||password.length>72)return s.status(400).json({error:"Password must be 10–72 characters."});if(!secret||secret.length<32)return s.status(503).json({error:"Authentication is not configured."});try{const r=await db.query("INSERT INTO users(username,email,password_hash) VALUES($1,$2,$3) RETURNING id,username,email,role,xp,created_at",[username,email.toLowerCase(),await bcrypt.hash(password,12)]);s.status(201).json({token:sign(r.rows[0]),user:r.rows[0]});}catch(e){if(e.code==="23505")return s.status(409).json({error:"Username or email already registered."});throw e;}});
+app.post("/api/auth/login",ready,authLimiter,async(q,s)=>{const{login,password}=q.body||{};if(typeof login!=="string"||typeof password!=="string")return s.status(400).json({error:"Enter login and password."});if(!secret||secret.length<32)return s.status(503).json({error:"Authentication is not configured."});const r=await db.query("SELECT * FROM users WHERE lower(email)=lower($1) OR lower(username)=lower($1)",[login]),u=r.rows[0];if(!u||!(await bcrypt.compare(password,u.password_hash)))return s.status(401).json({error:"Incorrect login details."});const{password_hash,...user}=u;s.json({token:sign(u),user});});
+app.get("/api/me",ready,auth,async(q,s)=>{const[p,a,c]=await Promise.all([db.query("SELECT mission_id,best_score FROM mission_progress WHERE user_id=$1",[q.user.id]),db.query("SELECT a.id,a.title,a.description FROM user_achievements ua JOIN achievements a ON a.id=ua.achievement_id WHERE ua.user_id=$1",[q.user.id]),db.query("SELECT best_score FROM command_progress WHERE user_id=$1",[q.user.id])]);s.json({user:q.user,missionProgress:p.rows,achievements:a.rows,commandProgress:c.rows[0]||null});});
+app.post("/api/missions/:id/attempts",ready,auth,limiter,async(q,s)=>{const{attemptId,choiceId}=q.body||{},m=findMission(q.params.id),r=evaluateChoice(m,choiceId);if(!/^[0-9a-f-]{36}$/i.test(attemptId||"")||!r)return s.status(400).json({error:"Invalid mission attempt."});const c=await db.connect();try{await c.query("BEGIN");await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",[q.user.id+m.id]);await c.query("INSERT INTO mission_attempts(attempt_id,user_id,mission_id,choice_id,score,correct) VALUES($1,$2,$3,$4,$5,$6)",[attemptId,q.user.id,m.id,choiceId,r.score,r.correct]);const old=await c.query("SELECT best_score FROM mission_progress WHERE user_id=$1 AND mission_id=$2",[q.user.id,m.id]),prev=old.rows[0]?.best_score??-1;let xp=0;if(r.score>prev){xp=Math.floor(r.score/2)-Math.max(0,Math.floor(prev/2))+10;await c.query("INSERT INTO mission_progress VALUES($1,$2,$3) ON CONFLICT(user_id,mission_id) DO UPDATE SET best_score=EXCLUDED.best_score",[q.user.id,m.id,r.score]);await c.query("UPDATE users SET xp=xp+$2 WHERE id=$1",[q.user.id,xp]);}const count=await c.query("SELECT count(*)::int n FROM mission_progress WHERE user_id=$1",[q.user.id]);if(count.rows[0].n>=1)xp+=await badge(c,q.user.id,"first");if(r.score===100)xp+=await badge(c,q.user.id,"perfect");if(count.rows[0].n>=3)xp+=await badge(c,q.user.id,"explorer");await c.query("COMMIT");s.status(201).json({...r,xpAwarded:xp});}catch(e){await c.query("ROLLBACK");if(e.code==="23505")return s.status(409).json({error:"Attempt already submitted."});throw e;}finally{c.release();}});
+app.get("/api/daily",ready,auth,async(q,s)=>{const d=day(),m=daily(),r=await db.query("SELECT score FROM daily_done WHERE user_id=$1 AND challenge_date=$2",[q.user.id,d]);s.json({date:d,mission:publicMission(m),completed:!!r.rowCount,result:r.rows[0]||null});});
+app.post("/api/daily/attempts",ready,auth,limiter,async(q,s)=>{const{attemptId,choiceId}=q.body||{},m=daily(),r=evaluateChoice(m,choiceId),d=day();if(!/^[0-9a-f-]{36}$/i.test(attemptId||"")||!r)return s.status(400).json({error:"Invalid daily attempt."});const c=await db.connect();try{await c.query("BEGIN");await c.query("INSERT INTO daily_done VALUES($1,$2,$3,$4)",[q.user.id,d,m.id,r.score]);await c.query("INSERT INTO mission_attempts(attempt_id,user_id,mission_id,choice_id,score,correct) VALUES($1,$2,$3,$4,$5,$6)",[attemptId,q.user.id,m.id,choiceId,r.score,r.correct]);await c.query("UPDATE users SET xp=xp+25 WHERE id=$1",[q.user.id]);const b=await badge(c,q.user.id,"daily");await c.query("COMMIT");s.status(201).json({...r,xpAwarded:25+b});}catch(e){await c.query("ROLLBACK");if(e.code==="23505")return s.status(409).json({error:"Today's challenge is already completed."});throw e;}finally{c.release();}});
+app.post("/api/command/attempts",ready,auth,limiter,async(q,s)=>{const{attemptId,allocation}=q.body||{},r=evaluateCommand(allocation);if(!/^[0-9a-f-]{36}$/i.test(attemptId||"")||!r)return s.status(400).json({error:"Allocate exactly 10 whole units."});const c=await db.connect();try{await c.query("BEGIN");await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",[q.user.id+"cmd"]);await c.query("INSERT INTO command_attempts(attempt_id,user_id,allocation,score) VALUES($1,$2,$3,$4)",[attemptId,q.user.id,allocation,r.score]);const old=await c.query("SELECT best_score FROM command_progress WHERE user_id=$1",[q.user.id]),prev=old.rows[0]?.best_score??-1;let xp=0;if(r.score>prev){xp=Math.floor(r.score/2)-Math.max(0,Math.floor(prev/2))+10;await c.query("INSERT INTO command_progress VALUES($1,$2) ON CONFLICT(user_id) DO UPDATE SET best_score=EXCLUDED.best_score",[q.user.id,r.score]);await c.query("UPDATE users SET xp=xp+$2 WHERE id=$1",[q.user.id,xp]);}if(r.score>=76)xp+=await badge(c,q.user.id,"commander");await c.query("COMMIT");s.status(201).json({...r,xpAwarded:xp});}catch(e){await c.query("ROLLBACK");if(e.code==="23505")return s.status(409).json({error:"Attempt already submitted."});throw e;}finally{c.release();}});
+app.get("/api/leaderboard",ready,async(q,s)=>{const w=q.query.period==="weekly",sql=w?"SELECT u.username,COALESCE(SUM(a.score),0)::int score,COUNT(a.id)::int missions FROM users u LEFT JOIN mission_attempts a ON a.user_id=u.id AND a.created_at>=date_trunc('week',NOW()) GROUP BY u.id ORDER BY score DESC,u.username LIMIT 50":"SELECT username,xp score,(SELECT COUNT(*) FROM mission_progress p WHERE p.user_id=users.id)::int missions FROM users ORDER BY xp DESC,username LIMIT 50";s.json({players:(await db.query(sql)).rows});});
+app.get("/api/admin/overview",ready,auth,admin,async(q,s)=>{const[u,a,p]=await Promise.all([db.query("SELECT count(*)::int n FROM users"),db.query("SELECT count(*)::int n FROM mission_attempts"),db.query("SELECT count(*)::int n FROM mission_attempts WHERE reviewed=false")]);s.json({users:u.rows[0].n,attempts:a.rows[0].n,pending:p.rows[0].n});});
+app.get("/api/admin/attempts",ready,auth,admin,async(q,s)=>s.json({attempts:(await db.query("SELECT a.id,a.mission_id,a.choice_id,a.score,a.correct,a.reviewed,u.username FROM mission_attempts a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.created_at DESC LIMIT 100")).rows}));
+app.patch("/api/admin/attempts/:id/review",ready,auth,admin,async(q,s)=>{if(typeof q.body?.reviewed!=="boolean")return s.status(400).json({error:"reviewed must be boolean"});const r=await db.query("UPDATE mission_attempts SET reviewed=$2 WHERE id=$1 RETURNING id,reviewed",[q.params.id,q.body.reviewed]);if(!r.rowCount)return s.status(404).json({error:"Attempt not found"});await db.query("INSERT INTO admin_audit(admin_id,action,details) VALUES($1,'attempt_review',$2)",[q.user.id,{id:q.params.id,reviewed:q.body.reviewed}]);s.json({attempt:r.rows[0]});});
+app.post("/api/admin/bootstrap",ready,authLimiter,async(q,s)=>{if(!process.env.ADMIN_BOOTSTRAP_KEY||q.headers["x-admin-bootstrap-key"]!==process.env.ADMIN_BOOTSTRAP_KEY)return s.status(403).json({error:"Invalid bootstrap key"});const n=await db.query("SELECT count(*)::int n FROM users WHERE role='admin'");if(n.rows[0].n)return s.status(409).json({error:"An admin already exists"});const r=await db.query("UPDATE users SET role='admin' WHERE id=$1 RETURNING id,username,role",[q.body?.userId]);if(!r.rowCount)return s.status(404).json({error:"User not found"});await db.query("INSERT INTO admin_audit(admin_id,action) VALUES($1,'first_admin_bootstrap')",[r.rows[0].id]);s.json({user:r.rows[0]});});
+app.use((e,q,s,n)=>{if(e?.type==="entity.too.large")return s.status(413).json({error:"Request too large"});if(e instanceof SyntaxError)return s.status(400).json({error:"Invalid JSON"});if(e.message==="Origin not allowed")return s.status(403).json({error:"Origin not allowed"});console.error(e);s.status(500).json({error:"Unexpected server error"});});
+const server=app.listen(port,()=>console.log("Mission Zero API listening on "+port));process.on("SIGINT",()=>{server.close();db?.end()});process.on("SIGTERM",()=>{server.close();db?.end()});
