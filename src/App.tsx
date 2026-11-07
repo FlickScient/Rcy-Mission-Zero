@@ -1,170 +1,37 @@
-import { useState } from "react";
-import { ArrowDownRight, ArrowLeft, ArrowRight, Award, Check, Crosshair, HeartPulse, Menu, Shield, ShieldAlert, Timer, Trophy, Users, X } from "lucide-react";
-
-type Choice = { id: string; title: string; detail: string; safe: boolean };
-type Mission = { id: string; code: string; title: string; location: string; brief: string; hazard: string; choices: Choice[]; explanation: string };
-
-const missions: Mission[] = [{
-  id: "roadside-collision-001",
-  code: "FIELD SCENARIO 001",
-  title: "The Roadside Collision",
-  location: "URBAN RESPONSE · LEVEL 01",
-  brief: "You and two volunteers arrive at a roadside collision. A motorbike is down. One person is sitting nearby, shaken but conscious. A damaged electrical pole is leaning toward the road, and a small crowd is gathering.",
-  hazard: "POTENTIAL ELECTRICAL HAZARD",
-  choices: [
-    { id: "secure", title: "Pause, assess hazards and keep everyone clear", detail: "Create distance from the scene and alert the appropriate emergency services about the damaged pole.", safe: true },
-    { id: "rush", title: "Rush straight to the injured person", detail: "Try to help immediately before the situation gets worse.", safe: false },
-    { id: "crowd", title: "Ask bystanders to move the bike and pole debris", detail: "Clear the road quickly so traffic can move again.", safe: false }
-  ],
-  explanation: "Good response starts with scene safety. A damaged electrical pole or downed line can create a serious hazard. Keep people away, do not touch the pole or wires, and contact the relevant emergency services and utility authority. Only approach when the scene is confirmed safe."
-}];
-
-type AttemptResult = { correct: boolean; score: number; title: string; explanation: string; takeaway: string };
-
-function App() {
-  const [missionOpen, setMissionOpen] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [finished, setFinished] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [serverResult, setServerResult] = useState<AttemptResult | null>(null);
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
-  const mission = missions[0];
-  const choice = mission.choices.find((item) => item.id === selected);
-
-  const startMission = () => {
-    setSelected(null);
-    setFinished(false);
-    setServerResult(null);
-    setSubmitError(null);
-    setMissionOpen(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const submitDecision = async () => {
-    if (!selected || submitting) return;
-    setSubmitError(null);
-    if (!apiBaseUrl) {
-      setFinished(true);
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const response = await fetch(`${apiBaseUrl}/api/missions/${mission.id}/attempts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attemptId: crypto.randomUUID(), choiceId: selected })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not submit this decision.");
-      setServerResult(data as AttemptResult);
-      setFinished(true);
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Network error. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (missionOpen) return (
-    <main className="mission-shell">
-      <nav className="topbar mission-nav">
-        <button className="brand" onClick={() => setMissionOpen(false)}><span className="brand-mark"><Shield size={19} /></span><span>RCY <b>MISSION ZERO</b></span></button>
-        <span className="eyebrow">TRAINING SIMULATION <i /></span>
-        <button className="icon-button" aria-label="Close mission" onClick={() => setMissionOpen(false)}><X size={19} /></button>
-      </nav>
-      <section className="mission-content">
-        <button className="back-link" onClick={() => setMissionOpen(false)}><ArrowLeft size={15} /> BACK TO BRIEFING</button>
-        <div className="mission-meta"><span>{mission.code}</span><span>01 / 05</span></div>
-        <div className="progress-track"><span /></div>
-        <div className="scenario-card">
-          <div className="scenario-tag"><Crosshair size={14} /> {mission.location}</div>
-          <h1>{mission.title}<span>.</span></h1>
-          <p className="scenario-brief">{mission.brief}</p>
-          <div className="hazard"><ShieldAlert size={17} /><span>{mission.hazard}</span></div>
-        </div>
-        {!finished ? <>
-          <div className="decision-heading"><div><span className="section-kicker">YOUR DECISION</span><h2>What do you do first?</h2></div><span className="decision-count">SELECT ONE</span></div>
-          <div className="choices">
-            {mission.choices.map((item, index) => <button key={item.id} className={selected === item.id ? "choice selected" : "choice"} onClick={() => setSelected(item.id)}>
-              <span className="choice-index">0{index + 1}</span><span className="choice-copy"><b>{item.title}</b><small>{item.detail}</small></span><span className="choice-radio">{selected === item.id && <Check size={14} />}</span>
-            </button>)}
-          </div>
-          <button className="primary-button submit-button" disabled={!selected || submitting} onClick={submitDecision}>{submitting ? "SUBMITTING..." : "CONFIRM DECISION"} <ArrowRight size={17} /></button>
-          {submitError && <p className="submit-error" role="alert">{submitError}</p>}
-        </> : <div className="feedback-card">
-          <div className={(serverResult?.correct ?? choice?.safe) ? "feedback-icon good" : "feedback-icon"}>{(serverResult?.correct ?? choice?.safe) ? <Check size={24} /> : <ShieldAlert size={24} />}</div>
-          <span className="section-kicker">SCENARIO DEBRIEF</span>
-          <h2>{serverResult?.title ?? (choice?.safe ? "Good call." : "That decision adds risk.")}</h2>
-          {serverResult && <span className="section-kicker">SERVER-VERIFIED DEMO SCORE: {serverResult.score} / 100</span>}
-          <p>{serverResult?.explanation ?? mission.explanation}</p>
-          <div className="learning-note"><b>KEY TAKEAWAY</b><span>{serverResult?.takeaway ?? "Scene safety comes before direct assistance. Never approach downed electrical equipment or wires."}</span></div>
-          <button className="primary-button" onClick={startMission}>REPLAY SCENARIO <ArrowRight size={17} /></button>
-        </div>}
-        <p className="simulation-note">DEMO SCENARIO · NOT A CERTIFIED FIRST-AID COURSE OR OFFICIAL RCY ASSESSMENT</p>
-      </section>
-    </main>
-  );
-
-  return (
-    <main>
-      <nav className="topbar">
-        <a className="brand" href="#"><span className="brand-mark"><Shield size={19} /></span><span>RCY <b>MISSION ZERO</b></span></a>
-        <div className={menuOpen ? "nav-links open" : "nav-links"}>
-          <a href="#missions" onClick={() => setMenuOpen(false)}>Missions</a><a href="#modes" onClick={() => setMenuOpen(false)}>Game modes</a><a href="#rankings" onClick={() => setMenuOpen(false)}>Rankings</a>
-        </div>
-        <div className="nav-right"><span className="online"><i /> SYSTEM ONLINE</span><button className="menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu"><Menu size={20} /></button><button className="nav-cta" onClick={startMission}>PLAY DEMO <ArrowRight size={15} /></button></div>
-      </nav>
-
-      <section className="hero">
-        <div className="hero-grid" />
-        <div className="hero-content">
-          <div className="hero-label"><span className="pulse" /> RED CRESCENT YOUTH · CHATKHIL</div>
-          <h1>WHEN EVERY<br />SECOND <em>COUNTS.</em></h1>
-          <p className="hero-sub">Think fast. Act smart. Save lives.</p>
-          <p className="hero-description">A challenge of judgment, teamwork and readiness. Step into realistic scenarios and make the calls that matter.</p>
-          <div className="hero-actions"><button className="primary-button" onClick={startMission}>START A MISSION <ArrowRight size={17} /></button><a className="text-link" href="#modes">EXPLORE THE GAME <ArrowDownRight size={16} /></a></div>
-          <div className="hero-footnote"><span>01</span> LEARN THROUGH DECISIONS <span className="foot-divider" /> BUILT FOR THE NEXT GENERATION OF RESPONDERS</div>
-        </div>
-        <div className="hero-visual" aria-hidden="true">
-          <div className="orbit orbit-one" /><div className="orbit orbit-two" />
-          <div className="visual-cross"><span /><i /></div>
-          <div className="visual-label label-top"><span>RESPONSE PROTOCOL</span><b>01 — ASSESS</b></div>
-          <div className="visual-label label-bottom"><span>MISSION STATUS</span><b><i /> READY FOR DEPLOYMENT</b></div>
-          <div className="visual-coordinate">23°03' N<br />91°07' E</div>
-        </div>
-        <div className="hero-side-index">MZ / 001</div>
-      </section>
-
-      <section className="stats-strip">
-        <div><span className="stat-icon"><Crosshair size={17} /></span><span><b>REAL-WORLD</b><small>DECISION SCENARIOS</small></span></div>
-        <div><span className="stat-icon"><Users size={17} /></span><span><b>TEAM-FOCUSED</b><small>STRATEGIC THINKING</small></span></div>
-        <div><span className="stat-icon"><Award size={17} /></span><span><b>SKILL-BUILDING</b><small>NOT JUST POINTS</small></span></div>
-      </section>
-
-      <section className="section missions-section" id="missions">
-        <div className="section-heading"><div><span className="section-kicker">01 / STEP INTO THE FIELD</span><h2>Every mission<br />starts with a <em>choice.</em></h2></div><p>Not every situation has an obvious answer. Read the scene, identify the risks, and decide what matters first.</p></div>
-        <div className="mission-feature">
-          <div className="mission-art"><div className="art-grid" /><div className="art-cross"><HeartPulse size={72} strokeWidth={1} /></div><span className="art-code">FIELD NOTE / 001</span><span className="art-caption">ASSESS BEFORE YOU ACT.</span></div>
-          <div className="mission-info"><div className="mission-info-top"><span className="tag">AVAILABLE DEMO</span><span className="duration"><Timer size={14} /> 3–5 MIN</span></div><span className="section-kicker">MISSION 001 · URBAN RESPONSE</span><h3>The Roadside<br />Collision</h3><p>A roadside incident. An injured person. A damaged electrical pole. You have limited resources and one priority: make the safest first move.</p><div className="mission-bottom"><span><b>01</b> DECISION POINT</span><button className="round-arrow" onClick={startMission} aria-label="Play Roadside Collision"><ArrowRight size={19} /></button></div></div>
-        </div>
-      </section>
-
-      <section className="section modes-section" id="modes">
-        <div className="section-heading"><div><span className="section-kicker">02 / CHOOSE YOUR APPROACH</span><h2>Two ways to<br /><em>make a difference.</em></h2></div><p>From split-second decisions to the bigger picture. Build the mindset of someone others can count on.</p></div>
-        <div className="mode-grid">
-          <article className="mode-card active-mode"><div className="mode-top"><span className="mode-number">01</span><span className="tag">PLAYABLE DEMO</span></div><div className="mode-icon"><Crosshair size={26} /></div><h3>Mission Mode</h3><p>Face realistic emergency scenarios. Evaluate risks, choose your response and learn from the outcome.</p><button className="mode-link" onClick={startMission}>ENTER MISSION <ArrowRight size={16} /></button></article>
-          <article className="mode-card locked-mode"><div className="mode-top"><span className="mode-number">02</span><span className="tag muted-tag">IN DEVELOPMENT</span></div><div className="mode-icon"><Users size={26} /></div><h3>Command Mode</h3><p>Lead a response team, manage limited supplies and make strategic calls under pressure.</p><span className="mode-link disabled-link">COMING IN A FUTURE BUILD <ArrowRight size={16} /></span></article>
-        </div>
-      </section>
-
-      <section className="ranking-section" id="rankings"><div className="ranking-inner"><div><span className="section-kicker">03 / THE COMPETITIVE EDGE</span><h2>Earn your place.<br /><em>Not your shortcuts.</em></h2><p>Daily challenges, verified achievements and seasonal recognition are planned for a future release. Scores will reward safe decisions and sound judgment — not reckless speed.</p></div><div className="ranking-panel"><div className="ranking-panel-head"><span><Trophy size={17} /> LEADERBOARD</span><span className="tag muted-tag">COMING SOON</span></div><div className="empty-rank"><div className="rank-emblem"><Trophy size={25} /></div><b>THE BOARD IS WAITING.</b><span>First, master the mission.</span></div><div className="rank-foot"><span>SEASON 01</span><span>0 VERIFIED PLAYERS</span></div></div></div></section>
-
-      <section className="closing"><div className="closing-mark"><Shield size={28} /></div><span className="section-kicker">RED CRESCENT YOUTH · CHATKHIL</span><h2>Ready when<br /><em>it matters.</em></h2><button className="primary-button" onClick={startMission}>TAKE THE FIRST MISSION <ArrowRight size={17} /></button></section>
-      <footer><a className="brand footer-brand" href="#"><span className="brand-mark"><Shield size={16} /></span><span>RCY <b>MISSION ZERO</b></span></a><span>AN INDEPENDENT LEARNING GAME CONCEPT</span><span>THINK FAST. ACT SMART. SAVE LIVES.</span></footer>
-    </main>
-  );
+// @ts-nocheck
+import {useEffect,useState} from "react";
+import {ArrowRight,Award,Check,Crosshair,LogOut,Menu,Shield,ShieldAlert,Trophy,Users,X} from "lucide-react";
+const API=(import.meta.env.VITE_API_BASE_URL||"").replace(/\/$/,""),KEY="mission-zero-token";
+async function api(path,opts={}){const token=sessionStorage.getItem(KEY),res=await fetch(API+path,{...opts,headers:{"Content-Type":"application/json",...(token?{Authorization:"Bearer "+token}:{}),...(opts.headers||{})}}),data=await res.json().catch(()=>({error:"Invalid response"}));if(!res.ok)throw Error(data.error||"Request failed");return data;}
+const demo=[{id:"roadside-001",title:"The Roadside Collision",category:"URBAN RESPONSE",level:1,brief:"A motorbike is down, a person is conscious nearby, and a damaged electrical pole leans toward the road.",hazard:"ELECTRICAL HAZARD",choices:[{id:"secure",title:"Keep everyone clear and alert emergency services",detail:"Do not touch the pole, wires or nearby objects."},{id:"rush",title:"Rush directly to the injured person",detail:"Approach before the hazard is assessed."},{id:"move",title:"Ask bystanders to move debris",detail:"Clear objects near the damaged pole."}]}];
+export default function App(){
+const [missions,setMissions]=useState<any[]>(demo),[online,setOnline]=useState(false),[user,setUser]=useState<any>(null),[profile,setProfile]=useState<any>(null),[page,setPage]=useState("missions"),[mission,setMission]=useState<any>(null),[choice,setChoice]=useState(""),[result,setResult]=useState<any>(null),[authOpen,setAuthOpen]=useState(false),[authMode,setAuthMode]=useState("login"),[form,setForm]=useState({login:"",username:"",email:"",password:""}),[error,setError]=useState(""),[busy,setBusy]=useState(false),[daily,setDaily]=useState<any>(null),[dailyChoice,setDailyChoice]=useState(""),[dailyResult,setDailyResult]=useState<any>(null),[allocation,setAllocation]=useState<any>({medical:4,water:2,shelter:3,communications:1}),[commandResult,setCommandResult]=useState<any>(null),[ranking,setRanking]=useState([]),[period,setPeriod]=useState("all-time"),[season,setSeason]=useState<any>(null),[seasonForm,setSeasonForm]=useState({name:"",startsAt:"",endsAt:""}),[seasons,setSeasons]=useState<any[]>([]),[admin,setAdmin]=useState<any>(null),[attempts,setAttempts]=useState([]),[players,setPlayers]=useState([]),[boot,setBoot]=useState({id:"",key:""}),[menu,setMenu]=useState(false);
+async function refresh(){const d=await api("/api/me");setUser(d.user);setProfile(d);}
+useEffect(()=>{api("/api/missions").then(d=>{setMissions(d.missions);setOnline(true)}).catch(()=>{});if(sessionStorage.getItem(KEY))refresh().catch(()=>sessionStorage.removeItem(KEY));},[]);
+useEffect(()=>{if(page==="daily"&&user)api("/api/daily").then(setDaily).catch(e=>setError(e.message));if(page==="leaderboard")api("/api/leaderboard?period="+period).then(d=>{setRanking(d.players);setSeason(d.season||null)}).catch(e=>setError(e.message));if(page==="profile"&&user)refresh().catch(e=>setError(e.message));if(page==="admin"&&user?.role==="admin")Promise.all([api("/api/admin/overview"),api("/api/admin/attempts"),api("/api/admin/users"),api("/api/admin/seasons")]).then(([a,b,d,e])=>{setAdmin(a);setAttempts(b.attempts);setPlayers(d.users);setSeasons(e.seasons)}).catch(e=>setError(e.message));},[page,user?.id,period]);
+function openMission(m){setMission(m);setChoice("");setResult(null);setPage("missions");window.scrollTo(0,0);}
+async function submitMission(){setBusy(true);setError("");try{const d=await api("/api/missions/"+mission.id+"/attempts",{method:"POST",body:JSON.stringify({attemptId:crypto.randomUUID(),choiceId:choice})});setResult(d);await refresh();}catch(e){setError(e.message)}finally{setBusy(false)}}
+async function submitAuth(e){e.preventDefault();setBusy(true);setError("");try{const d=await api("/api/auth/"+(authMode==="login"?"login":"register"),{method:"POST",body:JSON.stringify(authMode==="login"?{login:form.login,password:form.password}:{username:form.username,email:form.email,password:form.password})});sessionStorage.setItem(KEY,d.token);setUser(d.user);setAuthOpen(false);await refresh();}catch(e){setError(e.message)}finally{setBusy(false)}}
+async function submitDaily(){setBusy(true);try{setDailyResult(await api("/api/daily/attempts",{method:"POST",body:JSON.stringify({attemptId:crypto.randomUUID(),choiceId:dailyChoice})}));await refresh();setDaily(await api("/api/daily"));}catch(e){setError(e.message)}finally{setBusy(false)}}
+async function submitCommand(){setBusy(true);try{setCommandResult(await api("/api/command/attempts",{method:"POST",body:JSON.stringify({attemptId:crypto.randomUUID(),allocation})}));await refresh();}catch(e){setError(e.message)}finally{setBusy(false)}}
+async function bootstrap(){setBusy(true);try{await api("/api/admin/bootstrap",{method:"POST",headers:{"X-Admin-Bootstrap-Key":boot.key},body:JSON.stringify({userId:boot.id})});await refresh();}catch(e){setError(e.message)}finally{setBusy(false)}}
+async function createSeason(e){e.preventDefault();try{await api("/api/admin/seasons",{method:"POST",body:JSON.stringify({name:seasonForm.name,startsAt:new Date(seasonForm.startsAt).toISOString(),endsAt:new Date(seasonForm.endsAt).toISOString()})});setSeasons((await api("/api/admin/seasons")).seasons);setSeasonForm({name:"",startsAt:"",endsAt:""})}catch(e){setError(e.message)}}
+async function verifyPlayer(id,verified){try{await api("/api/admin/users/"+id+"/verification",{method:"PATCH",body:JSON.stringify({verified})});setPlayers((await api("/api/admin/users")).users)}catch(e){setError(e.message)}}
+async function review(id,reviewed){try{await api("/api/admin/attempts/"+id+"/review",{method:"PATCH",body:JSON.stringify({reviewed})});setAttempts((await api("/api/admin/attempts")).attempts)}catch(e){setError(e.message)}}
+function logout(){sessionStorage.removeItem(KEY);setUser(null);setProfile(null);setPage("missions");}
+const total=Object.values(allocation).reduce((a,b)=>a+b,0),nav=[["missions","Missions"],["command","Command Mode"],["daily","Daily Challenge"],["leaderboard","Leaderboard"]];
+return <main>
+<nav className="topbar"><a className="brand" href="#" onClick={()=>{setPage("missions");setMission(null)}}><span className="brand-mark"><Shield size={19}/></span><span>RCY <b>MISSION ZERO</b></span></a><div className={menu?"nav-links open":"nav-links"}>{nav.map(([id,label])=><button key={id} className="nav-item" onClick={()=>{setPage(id);setMission(null);setMenu(false)}}>{label}</button>)}</div><div className="nav-right"><span className="online"><i/>{online?"SYSTEM ONLINE":"DEMO MODE"}</span><button className="menu-button" onClick={()=>setMenu(!menu)} aria-label="Menu"><Menu size={20}/></button>{user?<button className="nav-cta" onClick={()=>setPage("profile")}>{user.username} · {user.xp} XP</button>:<button className="nav-cta" onClick={()=>setAuthOpen(true)}>SIGN IN <ArrowRight size={15}/></button>}</div></nav>
+{error&&<div className="toast-error" role="alert">{error}<button onClick={()=>setError("")}>×</button></div>}
+{!mission&&page==="missions"&&<><section className="hero"><div className="hero-grid"/><div className="hero-content"><div className="hero-label"><span className="pulse"/> RED CRESCENT YOUTH · CHATKHIL</div><h1>WHEN EVERY<br/>SECOND <em>COUNTS.</em></h1><p className="hero-sub">Think fast. Act smart. Save lives.</p><p className="hero-description">A decision-making game about preparedness, teamwork and safer choices. Learn through scenarios, earn XP and test your judgment.</p><div className="hero-actions"><button className="primary-button" onClick={()=>document.getElementById("missions")?.scrollIntoView({behavior:"smooth"})}>EXPLORE MISSIONS <ArrowRight/></button><button className="text-link" onClick={()=>setPage("daily")}>TODAY'S CHALLENGE →</button></div><div className="hero-footnote">01　LEARN THROUGH DECISIONS　·　BUILT FOR THE NEXT GENERATION</div></div><div className="hero-visual"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="visual-cross"><span/><i/></div></div></section><section className="stats-strip"><div><Crosshair/><span><b>{missions.length} SCENARIOS</b><small>MISSION LIBRARY</small></span></div><div><Users/><span><b>STRATEGY</b><small>COMMAND SIMULATION</small></span></div><div><Award/><span><b>PROGRESS</b><small>XP & ACHIEVEMENTS</small></span></div></section><section className="section" id="missions"><div className="section-heading"><div><span className="section-kicker">01 / STEP INTO THE FIELD</span><h2>Every mission<br/>starts with a <em>choice.</em></h2></div><p>Read the scene, identify risks and decide what matters first. Safer judgment beats reckless speed.</p></div><div className="mission-library">{missions.map((m,i)=><article className="library-card" key={m.id}><div className="library-number">0{i+1}</div><div className="library-copy"><span className="section-kicker">{m.category} · LEVEL {m.level}</span><h3>{m.title}</h3><p>{m.brief}</p><div className="library-meta">{m.choices.length} DECISIONS</div></div><button className="round-arrow" onClick={()=>openMission(m)} aria-label={"Play "+m.title}><ArrowRight/></button></article>)}</div></section><section className="section modes-section"><div className="section-heading"><div><span className="section-kicker">02 / THINK BEYOND THE MOMENT</span><h2>Respond. Then<br/><em>lead.</em></h2></div><p>Practice individual judgment and resource allocation in simplified learning simulations.</p></div><div className="mode-grid"><article className="mode-card"><div className="mode-icon"><Crosshair/></div><h3>Mission Mode</h3><p>Face preparedness scenarios, choose a response and learn from the outcome.</p></article><article className="mode-card"><div className="mode-icon"><Users/></div><h3>Command Mode</h3><p>Allocate a limited supply pool across four response priorities.</p><button className="mode-link" onClick={()=>setPage("command")}>ENTER COMMAND →</button></article></div></section><section className="ranking-section"><div className="ranking-inner"><div><span className="section-kicker">03 / THE COMPETITIVE EDGE</span><h2>Earn your place.<br/><em>Not your shortcuts.</em></h2><p>Earn XP for improving best results, unlock achievements and compare progress.</p><button className="primary-button" onClick={()=>setPage("leaderboard")}>VIEW RANKINGS →</button></div><div className="ranking-panel"><div className="ranking-panel-head"><span><Trophy/> LEADERBOARD</span></div><div className="empty-rank"><b>YOUR NEXT MOVE COUNTS.</b><span>Sign in to save game progress.</span></div></div></div></section></>}
+{mission&&<section className="mission-content"><button className="back-link" onClick={()=>setMission(null)}>← BACK TO MISSIONS</button><div className="mission-meta"><span>{mission.title}</span><span>LEVEL {mission.level}</span></div><div className="scenario-card"><div className="scenario-tag"><Crosshair size={14}/>{mission.category}</div><h1>{mission.title}<span>.</span></h1><p className="scenario-brief">{mission.brief}</p><div className="hazard"><ShieldAlert size={17}/>{mission.hazard}</div></div>{!result?<><div className="decision-heading"><div><span className="section-kicker">YOUR DECISION</span><h2>What do you do first?</h2></div></div><div className="choices">{mission.choices.map((c,i)=><button key={c.id} className={choice===c.id?"choice selected":"choice"} onClick={()=>setChoice(c.id)}><span className="choice-index">0{i+1}</span><span className="choice-copy"><b>{c.title}</b><small>{c.detail}</small></span><span className="choice-radio">{choice===c.id&&<Check size={14}/>}</span></button>)}</div><button className="primary-button submit-button" disabled={!choice||busy||!user} onClick={submitMission}>{!user?"SIGN IN TO SAVE RESULT":busy?"SUBMITTING…":"CONFIRM DECISION"} <ArrowRight/></button>{!user&&<p className="simulation-note">Create an account to submit scored attempts and earn XP.</p>}</>:<div className="feedback-card"><div className={result.correct?"feedback-icon good":"feedback-icon"}>{result.correct?<Check/>:<ShieldAlert/>}</div><span className="section-kicker">SCORE {result.score}/100 · +{result.xpAwarded||0} XP</span><h2>{result.title}</h2><p>{result.explanation}</p><div className="learning-note"><b>KEY TAKEAWAY</b><span>{result.takeaway}</span></div><button className="primary-button" onClick={()=>openMission(mission)}>REPLAY MISSION →</button></div>}<p className="simulation-note">EDUCATIONAL GAME ONLY · NOT CERTIFIED FIRST-AID OR EMERGENCY TRAINING.</p></section>}
+{!mission&&page==="command"&&<section className="page-shell"><span className="section-kicker">COMMAND MODE / RESOURCE ALLOCATION</span><h1 className="page-title">Lead with a <em>plan.</em></h1><p className="page-intro">A flood has displaced households. Allocate 10 resource units across four priorities. This simplified exercise is not a real deployment formula.</p><div className="command-panel"><div className="command-total">AVAILABLE UNITS <b>{total}/10</b></div>{Object.entries(allocation).map(([k,v])=><div className="resource-row" key={k}><div><b>{k.toUpperCase()}</b><span>{({medical:"Medical support",water:"Safe water",shelter:"Shelter",communications:"Communications"})[k]}</span></div><div className="resource-controls"><button disabled={!v} onClick={()=>setAllocation(a=>({...a,[k]:a[k]-1}))}>−</button><b>{v}</b><button disabled={total===10} onClick={()=>setAllocation(a=>({...a,[k]:a[k]+1}))}>+</button></div></div>)}<button className="primary-button submit-button" disabled={!user||total!==10||busy} onClick={submitCommand}>{!user?"SIGN IN TO SAVE":"SUBMIT DEPLOYMENT"} <ArrowRight/></button>{commandResult&&<div className="feedback-card"><h2>{commandResult.title}</h2><span className="section-kicker">SCORE {commandResult.score}/100 · +{commandResult.xpAwarded} XP</span><p>{commandResult.explanation}</p><div className="learning-note"><b>TAKEAWAY</b><span>{commandResult.takeaway}</span></div></div>}</div></section>}
+{!mission&&page==="daily"&&<section className="page-shell"><span className="section-kicker">DAILY CHALLENGE · BANGLADESH TIME</span><h1 className="page-title">One mission.<br/><em>Every day.</em></h1>{!user?<p className="empty-state">Sign in to load today's challenge.</p>:daily?.mission?<div className="daily-card"><span className="tag">TODAY · {daily.date}</span><h2>{daily.mission.title}</h2><p>{daily.mission.brief}</p>{daily.completed?<div className="learning-note"><b>COMPLETED</b><span>Score: {daily.result.score}/100. Come back tomorrow.</span></div>:dailyResult?<div className="feedback-card"><h2>{dailyResult.title}</h2><p>{dailyResult.explanation}</p><span>+{dailyResult.xpAwarded} XP</span></div>:<><div className="choices">{daily.mission.choices.map((c,i)=><button className={dailyChoice===c.id?"choice selected":"choice"} key={c.id} onClick={()=>setDailyChoice(c.id)}><span className="choice-index">0{i+1}</span><span className="choice-copy"><b>{c.title}</b><small>{c.detail}</small></span></button>)}</div><button className="primary-button submit-button" disabled={!dailyChoice||busy} onClick={submitDaily}>LOCK DAILY DECISION →</button></>}</div>:null}</section>}
+{!mission&&page==="leaderboard"&&<section className="page-shell"><span className="section-kicker">COMPETITIVE BOARD</span><h1 className="page-title">The <em>rankings.</em></h1><div className="board-controls"><button className="period" onClick={()=>setPeriod("all-time")}>ALL TIME XP</button><button className="period" onClick={()=>setPeriod("weekly")}>THIS WEEK</button><button className="period" onClick={()=>setPeriod("monthly")}>THIS MONTH</button><button className="period" onClick={()=>setPeriod("season")}>SEASON</button></div>{period==="season"&&<p className="page-intro">{season?season.name+" · "+new Date(season.starts_at).toLocaleDateString()+" — "+new Date(season.ends_at).toLocaleDateString():"No active championship season."}</p>}<div className="leaderboard">{ranking.map((p,i)=><div className="leader-row" key={p.username}><b className="leader-rank">0{i+1}</b><span className="leader-name">{p.username}</span><span className="leader-missions">{p.missions} missions</span><b className="leader-score">{p.score} XP</b></div>)}{!ranking.length&&<div className="empty-state">No ranked players yet.</div>}</div></section>}
+{!mission&&page==="profile"&&user&&<section className="page-shell"><span className="section-kicker">PLAYER RECORD</span><h1 className="page-title">Your <em>profile.</em></h1><div className="profile-card"><div className="profile-avatar">{user.username[0].toUpperCase()}</div><div><h2>{user.username}</h2><span>{user.role.toUpperCase()} {user.verified?" · VERIFIED RCY / COLLEGE":""}</span></div><div className="profile-xp"><b>{user.xp}</b><span>TOTAL XP</span></div></div><div className="profile-stats"><div><b>{profile?.missionProgress?.length||0}</b><span>MISSIONS</span></div><div><b>{profile?.achievements?.length||0}</b><span>ACHIEVEMENTS</span></div><div><b>{profile?.commandProgress?.best_score??"—"}</b><span>COMMAND BEST</span></div></div><h2 className="subheading">Achievements</h2><div className="achievement-grid">{profile?.achievements?.map(a=><div className="achievement" key={a.id}><Award/><b>{a.title}</b><span>{a.description}</span></div>)}</div><h2 className="subheading">Mission progress</h2><div className="leaderboard">{profile?.missionProgress?.map(p=><div className="leader-row" key={p.mission_id}><span className="leader-name">{missions.find(m=>m.id===p.mission_id)?.title||p.mission_id}</span><b>{p.best_score}/100</b></div>)}</div><button className="secondary-button" onClick={logout}><LogOut size={15}/> SIGN OUT</button></section>}
+{!mission&&page==="admin"&&user?.role==="admin"&&<section className="page-shell"><span className="section-kicker">ADMIN CONSOLE</span><h1 className="page-title">Control <em>room.</em></h1><div className="admin-stats"><div><b>{admin?.users??"—"}</b><span>PLAYERS</span></div><div><b>{admin?.attempts??"—"}</b><span>ATTEMPTS</span></div><div><b>{admin?.pending??"—"}</b><span>PENDING REVIEW</span></div></div><h2 className="subheading">Season management</h2><form className="command-panel" onSubmit={createSeason}><label>Season name<input required minLength={3} maxLength={60} value={seasonForm.name} onChange={e=>setSeasonForm(x=>({...x,name:e.target.value}))}/></label><label>Starts at<input required type="datetime-local" value={seasonForm.startsAt} onChange={e=>setSeasonForm(x=>({...x,startsAt:e.target.value}))}/></label><label>Ends at<input required type="datetime-local" value={seasonForm.endsAt} onChange={e=>setSeasonForm(x=>({...x,endsAt:e.target.value}))}/></label><button className="primary-button" type="submit">CREATE SEASON</button>{seasons.map(s=><p className="simulation-note" key={s.id}>{s.name} · {new Date(s.starts_at).toLocaleDateString()} – {new Date(s.ends_at).toLocaleDateString()}</p>)}</form><h2 className="subheading">Player verification</h2><div className="leaderboard">{players.map(p=><div className="admin-row" key={p.id}><div><b>{p.username}</b><span>{p.email} · {p.verified?"VERIFIED":"UNVERIFIED"}</span></div><button className="period" onClick={()=>verifyPlayer(p.id,!p.verified)}>{p.verified?"REVOKE":"VERIFY"}</button></div>)}</div><h2 className="subheading">Recent attempts</h2><div className="leaderboard">{attempts.map(a=><div className="admin-row" key={a.id}><div><b>{a.username||"Guest"}</b><span>{a.mission_id} · {a.choice_id} · {a.score}/100</span></div><button className="period" onClick={()=>review(a.id,!a.reviewed)}>{a.reviewed?"REOPEN":"MARK REVIEWED"}</button></div>)}</div></section>}
+{!mission&&page==="admin"&&user?.role!=="admin"&&<section className="page-shell"><span className="section-kicker">ADMIN ACCESS</span><h1 className="page-title">Restricted <em>area.</em></h1><p className="page-intro">First-admin setup works only while no administrator exists. Enter your account UUID and private server bootstrap key.</p><div className="command-panel"><label>Account UUID<input value={boot.id} onChange={e=>setBoot(x=>({...x,id:e.target.value}))}/></label><label>Bootstrap key<input type="password" value={boot.key} onChange={e=>setBoot(x=>({...x,key:e.target.value}))}/></label><button className="primary-button" disabled={!boot.id||!boot.key||busy} onClick={bootstrap}>BOOTSTRAP FIRST ADMIN</button></div></section>}
+<footer><a className="brand footer-brand" href="#" onClick={()=>{setPage("missions");setMission(null)}}><span className="brand-mark"><Shield size={16}/></span><span>RCY <b>MISSION ZERO</b></span></a><span>INDEPENDENT EDUCATIONAL GAME CONCEPT</span><span>THINK FAST. ACT SMART. SAVE LIVES.</span><button className="mode-link" onClick={()=>setPage("admin")}>ADMIN / SETUP</button></footer>
+{authOpen&&<div className="modal-backdrop" onClick={()=>setAuthOpen(false)}><div className="auth-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setAuthOpen(false)}><X/></button><span className="section-kicker">PLAYER ACCESS</span><h2>{authMode==="login"?"Welcome back.":"Create your account."}</h2><div className="board-controls"><button className="period" onClick={()=>setAuthMode("login")}>SIGN IN</button><button className="period" onClick={()=>setAuthMode("register")}>REGISTER</button></div><form onSubmit={submitAuth}>{authMode==="register"?<><label>Username<input required minLength={3} maxLength={24} value={form.username} onChange={e=>setForm(x=>({...x,username:e.target.value}))}/></label><label>Email<input type="email" required value={form.email} onChange={e=>setForm(x=>({...x,email:e.target.value}))}/></label></>:<label>Username or email<input required value={form.login} onChange={e=>setForm(x=>({...x,login:e.target.value}))}/></label>}<label>Password<input type="password" minLength={10} required value={form.password} onChange={e=>setForm(x=>({...x,password:e.target.value}))}/></label><button className="primary-button" disabled={busy||!online}>{authMode==="login"?"SIGN IN":"CREATE ACCOUNT"} <ArrowRight/></button></form></div></div>}
+</main>;
 }
-
-export default App;

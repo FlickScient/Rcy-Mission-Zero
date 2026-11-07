@@ -1,75 +1,34 @@
 # RCY — MISSION ZERO
-
 **Think Fast. Act Smart. Save Lives.**
 
-A standalone learning-game project for Red Crescent Youth, Chatkhil. This repository is intentionally separate from the existing RCY community website.
+Independent educational decision game for Red Crescent Youth, Chatkhil; separate from the existing RCY website.
 
-## Current build
+## Features
+Six server-owned Mission Mode scenarios; Command Mode resource-allocation simulation; bcrypt registration/login and expiring JWT; player profiles, XP, best scores and achievements; daily challenge using Bangladesh time; weekly, monthly, seasonal and all-time leaderboard; admin-created competition seasons; admin-managed RCY/college verification; first-admin bootstrap, admin overview and attempt review; PostgreSQL persistence, server-side scoring, duplicate protection, Helmet, CORS and rate limits.
 
-- Responsive Mission Zero landing page and visual identity
-- Playable Mission Mode scenario prototype
-- Standalone Express API with a mission catalogue endpoint
-- Server-side decision evaluation and score calculation
-- PostgreSQL attempt persistence with duplicate-attempt protection
-- Basic API hardening: Helmet headers, CORS allow-list, JSON size limit and rate limiting
-- Command Mode, accounts, admin tools and competitive leaderboard are not implemented yet
-
-## Requirements
-
-- Node.js 20+
-- PostgreSQL 14+ (for saving attempts)
-
-## Run the frontend
-
+## Setup
+Node.js 20+ and PostgreSQL 14+ required.
 ```bash
 npm install
+cp .env.example .env
+psql "$DATABASE_URL" -f server/schema.sql
+npm run api:dev
 npm run dev
 ```
+Configure DATABASE_URL, JWT_SECRET (32+ random characters), ADMIN_BOOTSTRAP_KEY (separate private secret), CLIENT_ORIGIN and VITE_API_BASE_URL. Run API and frontend separately. Never commit server secrets.
 
-## Run the API
+## First admin
+Register the intended account, retrieve its UUID from the users table, then use the admin bootstrap endpoint/panel with that UUID and server-side ADMIN_BOOTSTRAP_KEY. It only works while no admin exists. Rotate/remove the bootstrap secret afterward.
 
-1. Create a PostgreSQL database.
-2. Copy `.env.example` to `.env` and set `DATABASE_URL`.
-3. Apply the schema once:
+## API
+GET /health, /api/missions; POST /api/auth/register, /api/auth/login; GET /api/me; POST /api/missions/:id/attempts; GET /api/daily; POST /api/daily/attempts; POST /api/command/attempts; GET /api/seasons; GET /api/leaderboard?period=weekly|monthly|season|all-time. Admin: POST /api/admin/bootstrap; GET /api/admin/overview, /api/admin/users, /api/admin/seasons and /api/admin/attempts; POST /api/admin/seasons; PATCH /api/admin/users/:id/verification and /api/admin/attempts/:id/review.
 
-```bash
-psql "$DATABASE_URL" -f server/schema.sql
-```
+## Vercel deployment
 
-4. Start the API:
+The root `index.mjs` exports the Express app for Vercel. The Vite build writes the frontend into `public/`, which Vercel serves through its CDN alongside the Express function. Configure the Vercel project with the Express framework preset, Node.js 22.x, and `npm run build`; do not set an output directory of `dist`. Use the pooled Neon PostgreSQL connection string and keep `DATABASE_URL`, `JWT_SECRET`, and `ADMIN_BOOTSTRAP_KEY` as encrypted environment variables. Set `DATABASE_SSL=true` and `TRUST_PROXY=true` on Vercel. Same-origin requests are allowed; configure `CLIENT_ORIGIN` only for any additional trusted frontend origin.
 
-```bash
-npm run api:dev
-```
+## Fair play and deployment
+Scores are server-calculated. XP is awarded only when best results improve; daily completion is unique per account/day. Weekly ranking currently aggregates recorded weekly mission scores. In-process rate limiting is only a baseline. Public competition still needs shared rate limiting, stronger identity verification, moderation, monitoring, backups, security review and load testing. Production requires owner-controlled frontend/API hosting, managed PostgreSQL, TLS, secrets, exact CORS origins, schema application and smoke tests. No hosting credentials are included.
 
-The API listens on port 3001 by default. The mission screen submits decisions to the API when `VITE_API_BASE_URL=http://localhost:3001` is set in the frontend environment. Without that variable, it runs in clearly labelled local demo mode.
-
-## API routes
-
-- `GET /health` — process and database readiness
-- `GET /api/missions` — published demo mission catalogue
-- `GET /api/missions/:missionId` — one mission briefing and its choices
-- `POST /api/missions/:missionId/attempts` — validate a choice and calculate its result on the server
-
-Attempt request:
-
-```json
-{
-  "attemptId": "a-valid-uuid",
-  "choiceId": "secure"
-}
-```
-
-The API computes the score; it never trusts a score supplied by the browser. A repeated attempt ID is rejected. Attempts are currently anonymous and are not eligible for a public leaderboard.
-
-## Important limitations
-
-This is an early development foundation, not a production competition platform. There is no player authentication, account ownership, admin authorization, multi-instance rate-limit store, or leaderboard. Do not publish competitive rankings until authenticated player identity, abuse controls, review workflows and server-side validation are in place. The in-memory rate limiter is per process.
-
-## Safety and educational scope
-
-Mission Zero is a learning-game concept, not a substitute for certified first-aid, disaster-response, or emergency training. Any educational scenario or guidance must be reviewed by trained and authorized RCY/BDRCS personnel and aligned with current Bangladesh Red Crescent Society / IFRC guidance before public release. In a real emergency, contact the appropriate local emergency services and follow trained responders' instructions.
-
-## Architecture direction
-
-Keep this game independent from the existing RCY community website. Future integration should use a controlled link or documented API rather than coupling the two frontends.
+## Safety
+This is a game, not certified first-aid, medical, disaster-response or emergency training. All scenarios and answer keys are illustrative drafts and have **not** been reviewed or approved by BDRCS/IFRC. Qualified, authorized RCY/BDRCS reviewers must validate every educational item against current official guidance before public release. Game scores are not proof of real-world competence. In emergencies, contact appropriate emergency services and follow trained responders.
