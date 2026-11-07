@@ -1,12 +1,14 @@
-CREATE TABLE IF NOT EXISTS mission_attempts (
-  id BIGSERIAL PRIMARY KEY,
-  attempt_id UUID NOT NULL UNIQUE,
-  mission_id TEXT NOT NULL,
-  choice_id TEXT NOT NULL,
-  score INTEGER NOT NULL CHECK (score >= 0 AND score <= 100),
-  correct BOOLEAN NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS mission_attempts_mission_created_idx
-  ON mission_attempts (mission_id, created_at DESC);
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TABLE IF NOT EXISTS users(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),username TEXT UNIQUE NOT NULL CHECK(char_length(username) BETWEEN 3 AND 24),email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,role TEXT NOT NULL DEFAULT 'player' CHECK(role IN ('player','admin')),xp INTEGER NOT NULL DEFAULT 0 CHECK(xp>=0),created_at TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS mission_attempts(id BIGSERIAL PRIMARY KEY,attempt_id UUID UNIQUE NOT NULL,user_id UUID REFERENCES users(id) ON DELETE SET NULL,mission_id TEXT NOT NULL,choice_id TEXT NOT NULL,score INTEGER NOT NULL CHECK(score BETWEEN 0 AND 100),correct BOOLEAN NOT NULL,reviewed BOOLEAN DEFAULT FALSE,created_at TIMESTAMPTZ DEFAULT NOW());
+ALTER TABLE mission_attempts ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE mission_attempts ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE;
+CREATE INDEX IF NOT EXISTS attempts_user_date ON mission_attempts(user_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS mission_progress(user_id UUID REFERENCES users(id) ON DELETE CASCADE,mission_id TEXT,best_score INTEGER NOT NULL,PRIMARY KEY(user_id,mission_id));
+CREATE TABLE IF NOT EXISTS command_progress(user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,best_score INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS command_attempts(id BIGSERIAL PRIMARY KEY,attempt_id UUID UNIQUE NOT NULL,user_id UUID REFERENCES users(id) ON DELETE CASCADE,allocation JSONB NOT NULL,score INTEGER NOT NULL,created_at TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS daily_done(user_id UUID REFERENCES users(id) ON DELETE CASCADE,challenge_date DATE,mission_id TEXT,score INTEGER,PRIMARY KEY(user_id,challenge_date));
+CREATE TABLE IF NOT EXISTS achievements(id TEXT PRIMARY KEY,title TEXT,description TEXT,xp INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS user_achievements(user_id UUID REFERENCES users(id) ON DELETE CASCADE,achievement_id TEXT REFERENCES achievements(id),earned_at TIMESTAMPTZ DEFAULT NOW(),PRIMARY KEY(user_id,achievement_id));
+INSERT INTO achievements VALUES('first','First Response','Complete your first mission.',25),('perfect','Perfect Response','Earn a 100-point result.',50),('explorer','Field Explorer','Complete three missions.',75),('commander','Command Ready','Score at least 76 in Command Mode.',50),('daily','Daily Discipline','Complete a daily challenge.',25) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS admin_audit(id BIGSERIAL PRIMARY KEY,admin_id UUID REFERENCES users(id),action TEXT NOT NULL,details JSONB DEFAULT '{}'::jsonb,created_at TIMESTAMPTZ DEFAULT NOW());
