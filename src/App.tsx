@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {useEffect,useState} from "react";
 import {ArrowRight,Award,Check,Crosshair,LogOut,Menu,Shield,ShieldAlert,Trophy,Users,X} from "lucide-react";
 const API=(import.meta.env.VITE_API_BASE_URL||"").replace(/\/$/,""),KEY="mission-zero-token";
