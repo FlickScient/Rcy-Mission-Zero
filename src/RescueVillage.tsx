@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import {ArrowLeft,Radio,Shield,Users,Zap} from "lucide-react";
 
 const ROWS=8;
+const COLS=12;
 const sites=[
   {id:"north",name:"North Hamlet",kind:"homes",col:2,row:2,survivors:2,need:"Rescue team"},
   {id:"school",name:"Village School",kind:"school",col:8,row:1,survivors:1,need:"Medical kit"},
