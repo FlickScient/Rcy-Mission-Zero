@@ -22,6 +22,7 @@ const DIRECTIONS: Cell[] = [
  * impossible task.
  */
 export function findPath(start: Cell, goal: Cell): Cell[] | null {
+  if (isBlocked(start.col, start.row) || isBlocked(goal.col, goal.row)) return null;
   if (start.col === goal.col && start.row === goal.row) return [];
 
   const startKey = cellKey(start);
