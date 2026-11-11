@@ -14,6 +14,7 @@ const DIRECTIONS = [
 // Mirrors src/game/pathfinding.ts exactly (same BFS, same return
 // shape: [start, ...cells..., goal], or null if unreachable).
 export function findPath(start, goal) {
+  if (isBlocked(start.col, start.row) || isBlocked(goal.col, goal.row)) return null;
   if (start.col === goal.col && start.row === goal.row) return [];
 
   const startKey = cellKey(start);
