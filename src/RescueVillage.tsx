@@ -3,7 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import {ArrowLeft,Radio,Shield,Users,Zap} from "lucide-react";
 import {COLS,ROWS,obstacles} from "./game/grid";
 import {findPath} from "./game/pathfinding";
-import {drawWorld,unitPosition} from "./game/render";
+import {drawWorld,iso,unitPosition} from "./game/render";
 
 const STEP_TICKS=4;
 const sites=[
@@ -18,7 +18,7 @@ const unitsSeed=[
   {id:"charlie",name:"Team Charlie",role:"Supply",col:4,row:4,color:"#b9d5c7"}
 ];
 export default function RescueVillage({onBack,user,api,onProgress}){
- const canvasRef=useRef(null),gameRef=useRef(null),logRef=useRef([]),submittedRef=useRef(false);
+ const canvasRef=useRef(null),gameRef=useRef(null),logRef=useRef([]),submittedRef=useRef(false),cameraRef=useRef({x:0,y:0,zoom:1}),dragRef=useRef({active:false,moved:false,x:0,y:0,pointerId:null});
  const [selected,setSelected]=useState("alpha"),[saved,setSaved]=useState({}),[unitsState,setUnitsState]=useState(unitsSeed.map(u=>({...u,task:null,path:null,stepProgress:0}))),[supplies,setSupplies]=useState({kits:6,water:8}),[seconds,setSeconds]=useState(180),[running,setRunning]=useState(true),[message,setMessage]=useState("Select a volunteer, then tap a marked location to assign a task. Teams route around rubble and flood water."),[target,setTarget]=useState(null),[submission,setSubmission]=useState(null);
  const totalSaved=Object.values(saved).reduce((a,b)=>a+b,0),totalNeeded=sites.reduce((a,s)=>a+s.survivors,0),complete=totalSaved>=totalNeeded,allIdle=unitsState.every(u=>!u.task),failed=seconds===0||((supplies.kits===0||supplies.water===0)&&allIdle&&!complete);
  const activeUnit=unitsState.find(u=>u.id===selected);
@@ -26,7 +26,7 @@ export default function RescueVillage({onBack,user,api,onProgress}){
  useEffect(()=>{gameRef.current=game;});
  useEffect(()=>{
   let raf=0;
-  function loop(t){drawWorld(canvasRef.current,gameRef.current,t,sites);raf=requestAnimationFrame(loop);}
+  function loop(t){drawWorld(canvasRef.current,gameRef.current,t,sites,cameraRef.current);raf=requestAnimationFrame(loop);}
   raf=requestAnimationFrame(loop);
   return ()=>cancelAnimationFrame(raf);
  },[]);
@@ -55,13 +55,17 @@ export default function RescueVillage({onBack,user,api,onProgress}){
   logRef.current=[...logRef.current,{unitId:selected,siteId:site.id,atSecond:180-seconds}];
   setMessage(u.name+" dispatched to "+site.name+" via a "+travelPath.length+"-tile route. 1 kit and "+waterCost+" water crate(s) assigned.");
  }
- function clickMap(e){const rect=canvasRef.current.getBoundingClientRect(),x=(e.clientX-rect.left)*900/rect.width,y=(e.clientY-rect.top)*520/rect.height;const unit=unitsState.find(u=>{const p=unitPosition(u);return Math.hypot(p.x-x,p.y-7-y)<24;});if(unit){setSelected(unit.id);setMessage(unit.name+" selected. Choose a red rescue marker.");return;}const site=sites.find(s=>{const p=iso(s.col,s.row);return Math.hypot(p.x-x,p.y-43-y)<28;});if(site){dispatchSite(site);return;}setMessage("Tap a volunteer or a red rescue marker.");}
+ function clickMap(e){if(dragRef.current.moved){dragRef.current.moved=false;return;}const rect=canvasRef.current.getBoundingClientRect();let x=(e.clientX-rect.left)*900/rect.width,y=(e.clientY-rect.top)*520/rect.height;const cam=cameraRef.current;x=(x-450-cam.x)/cam.zoom+450;y=(y-260-cam.y)/cam.zoom+260;const unit=unitsState.find(u=>{const p=unitPosition(u);return Math.hypot(p.x-x,p.y-7-y)<24;});if(unit){setSelected(unit.id);setMessage(unit.name+" selected. Choose a red rescue marker.");return;}const site=sites.find(s=>{const p=iso(s.col,s.row);return Math.hypot(p.x-x,p.y-43-y)<28;});if(site){dispatchSite(site);return;}setMessage("Tap a volunteer or a red rescue marker.");}
+ function pointerDown(e){if(e.pointerType==="mouse"&&e.button!==0)return;const el=canvasRef.current;el?.setPointerCapture?.(e.pointerId);dragRef.current={active:true,moved:false,x:e.clientX,y:e.clientY,pointerId:e.pointerId};}
+ function pointerMove(e){const d=dragRef.current;if(!d.active||d.pointerId!==e.pointerId)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.abs(dx)+Math.abs(dy)>3)d.moved=true;if(d.moved){const rect=canvasRef.current.getBoundingClientRect();cameraRef.current={...cameraRef.current,x:Math.max(-360,Math.min(360,cameraRef.current.x+dx*900/rect.width)),y:Math.max(-220,Math.min(220,cameraRef.current.y+dy*520/rect.height))};}d.x=e.clientX;d.y=e.clientY;}
+ function pointerUp(e){const d=dragRef.current;if(d.pointerId===e.pointerId){d.active=false;d.pointerId=null;}}
+ function zoomMap(delta){cameraRef.current={...cameraRef.current,zoom:Math.max(.8,Math.min(1.65,Number((cameraRef.current.zoom+delta).toFixed(2))))};}
  function restart(){setSaved({});setUnitsState(unitsSeed.map(u=>({...u,task:null,path:null,stepProgress:0})));setSupplies({kits:6,water:8});setSeconds(180);setRunning(true);setTarget(null);setMessage("New operation started. Select a volunteer and assign a rescue.");logRef.current=[];submittedRef.current=false;setSubmission(null);}
  const time=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");
  return <section className="rescue-shell">
   <div className="rescue-heading"><button className="back-link" onClick={onBack}><ArrowLeft size={15}/> BACK TO BASE</button><span className="section-kicker">LIVE OPERATION / CHATKHIL SECTOR 04</span><h1>RESCUE <em>COMMANDER.</em></h1><p>Flood-hit village \u00b7 Isometric field simulation</p></div>
   <div className="rescue-hud"><div><span>MISSION TIME</span><b>{time}</b></div><div><span>SURVIVORS SAFE</span><b>{totalSaved}/{totalNeeded}</b></div><div><span>RESCUE KITS</span><b>{supplies.kits}</b></div><div><span>WATER CRATES</span><b>{supplies.water}</b></div></div>
-  <div className="rescue-map-wrap"><canvas ref={canvasRef} width="900" height="520" onClick={clickMap} role="img" aria-label="Isometric flood-hit village map with rubble and flood-water obstacles. Use the rescue location buttons below to dispatch the selected team."/><div className="map-legend"><span><i className="legend-unit"/> VOLUNTEER</span><span><i className="legend-target"/> RESCUE SITE</span><span><i className="legend-safe"/> CLEARED</span></div></div>
+  <div className="rescue-map-wrap"><div className="rescue-map-tools" aria-label="Map camera controls"><button type="button" onClick={()=>zoomMap(.15)} aria-label="Zoom in">+</button><button type="button" onClick={()=>zoomMap(-.15)} aria-label="Zoom out">−</button><button type="button" onClick={()=>{cameraRef.current={x:0,y:0,zoom:1};}} aria-label="Reset camera">⌂</button></div><canvas ref={canvasRef} width="900" height="520" onClick={clickMap} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} role="img" aria-label="Isometric flood-hit village map with rubble and flood-water obstacles. Use the rescue location buttons below to dispatch the selected team."/><div className="map-legend"><span><i className="legend-unit"/> VOLUNTEER</span><span><i className="legend-target"/> RESCUE SITE</span><span><i className="legend-safe"/> CLEARED</span></div></div>
   <div className="rescue-site-actions" aria-label="Rescue locations">{sites.map(site=><button key={site.id} className="rescue-site-button" onClick={()=>dispatchSite(site)} disabled={(saved[site.id]||0)+unitsState.filter(u=>u.task===site.id).length>=site.survivors||unitsState.find(u=>u.id===selected)?.task!=null}><b>{site.name}</b><span>{Math.max(0,site.survivors-(saved[site.id]||0))} survivors remaining</span></button>)}</div>
   <div className="rescue-control-grid"><div className="rescue-panel"><div className="rescue-panel-head"><Users size={17}/> VOLUNTEER TEAMS</div>{unitsState.map(u=><button key={u.id} className={"rescue-unit "+(selected===u.id?"active":"")} onClick={()=>setSelected(u.id)}><span className="unit-avatar">{u.id.slice(0,1).toUpperCase()}</span><span><b>{u.name}</b><small>{u.role} \u00b7 {u.task?"ON ROUTE":"AVAILABLE"}</small></span><span className="unit-state">{u.task?(u.path?u.path.length+" tiles left":"ARRIVING"):"READY"}</span></button>)}</div><div className="rescue-panel"><div className="rescue-panel-head"><Radio size={17}/> FIELD INTEL</div><p className="rescue-message">{message}</p><div className="rescue-objective"><b>PRIMARY OBJECTIVE</b><span>Evacuate all {totalNeeded} survivors from four marked locations before the operation timer expires. Route teams around rubble and flood water.</span></div><div className="rescue-progress"><i style={{width:(totalSaved/totalNeeded*100)+"%"}}/></div><small>{Math.round(totalSaved/totalNeeded*100)}% AREA SECURED</small></div></div>
   {(complete||failed)&&<div className="rescue-result"><div className="section-kicker">{complete?"OPERATION COMPLETE":"OPERATION ENDED"}</div><h2>{complete?"Village evacuation successful.":"Mission needs another attempt."}</h2><p>{totalSaved} of {totalNeeded} survivors evacuated. {submission?.error?"Could not save this result: "+submission.error+".":submission?.guest?"Sign in to save this result to your profile and earn XP.":submission?"Saved to your profile \u00b7 +"+submission.xpAwarded+" XP"+(submission.completed?" \u00b7 Operation fully cleared.":"")+".":"Saving your result\u2026"}</p><button className="primary-button" onClick={restart}>RESTART OPERATION <Zap size={15}/></button></div>}
