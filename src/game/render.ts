@@ -113,9 +113,9 @@ function drawVolunteer(ctx:CanvasRenderingContext2D,x:number,y:number,u:RenderUn
   else if(u.role==="Supply"){rounded(ctx,x+5,y-10+bob,7,7,1,"#9b7449");}
   else {ctx.strokeStyle="#f4eee2";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+5,y-7+bob);ctx.lineTo(x+10,y-14+bob);ctx.stroke();}
 }
-export function drawWorld(canvas:HTMLCanvasElement|null,game:VillageRenderState,timeMs:number,sites:RescueSite[]) {
+export function drawWorld(canvas:HTMLCanvasElement|null,game:VillageRenderState,timeMs:number,sites:RescueSite[],camera={x:0,y:0,zoom:1}) {
   const ctx=canvas?.getContext("2d");if(!ctx)return;
-  ctx.clearRect(0,0,900,520);
+  ctx.clearRect(0,0,900,520);\n  ctx.save();ctx.translate(450+camera.x,260+camera.y);ctx.scale(camera.zoom,camera.zoom);ctx.translate(-450,-260);
   // Layered ground, soft atmospheric light and edge vignette.
   const bg=ctx.createLinearGradient(0,0,0,520);bg.addColorStop(0,"#9abf79");bg.addColorStop(.48,"#76a963");bg.addColorStop(1,"#477e55");
   ctx.fillStyle=bg;ctx.fillRect(0,0,900,520);
@@ -175,4 +175,4 @@ export function drawWorld(canvas:HTMLCanvasElement|null,game:VillageRenderState,
   rounded(ctx,18,16,248,34,9,"rgba(18,38,28,.76)");
   ctx.fillStyle="#e9f0df";ctx.font="600 11px Manrope";ctx.textAlign="left";ctx.fillText("CHATKHIL  /  FLOOD RESPONSE ZONE",31,38);
   const vignette=ctx.createRadialGradient(450,260,210,450,260,560);vignette.addColorStop(0,"rgba(5,20,13,0)");vignette.addColorStop(1,"rgba(5,20,13,.28)");ctx.fillStyle=vignette;ctx.fillRect(0,0,900,520);
-}
+  ctx.restore();\n}\n
