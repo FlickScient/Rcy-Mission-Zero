@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import {ArrowLeft,Radio,Shield,Users,Zap} from "lucide-react";
 import {COLS,ROWS,obstacles} from "./game/grid";
 import {findPath} from "./game/pathfinding";
+import {drawWorld,unitPosition} from "./game/render";
 
 const STEP_TICKS=4;
 const sites=[
@@ -16,76 +17,6 @@ const unitsSeed=[
   {id:"bravo",name:"Team Bravo",role:"Medical",col:6,row:4,color:"#e9b7b5"},
   {id:"charlie",name:"Team Charlie",role:"Supply",col:4,row:4,color:"#b9d5c7"}
 ];
-const iso=(c,r)=>({x:450+(c-r)*34,y:58+(c+r)*17});
-function unitPosition(u){
-  if(u.path&&u.path.length){
-    const next=u.path[0];
-    const t=Math.min(1,u.stepProgress/STEP_TICKS);
-    return iso(u.col+(next.col-u.col)*t,u.row+(next.row-u.row)*t);
-  }
-  return iso(u.col,u.row);
-}
-function poly(ctx,pts,fill,stroke){ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}}
-function ellipse(ctx,x,y,rx,ry,color){ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}
-function tree(ctx,x,y,s=1){ellipse(ctx,x,y+8*s,13*s,5*s,"#285d43");poly(ctx,[{x:x-10*s,y:y},{x,y:y-28*s},{x:x+10*s,y:y}], "#397e51");poly(ctx,[{x:x-8*s,y:y-12*s},{x,y:y-38*s},{x:x+8*s,y:y-12*s}], "#4b9860");}
-function building(ctx,p,kind,label){
- if(kind==="rubble"){
-  poly(ctx,[{x:p.x-22,y:p.y-4},{x:p.x,y:p.y-12},{x:p.x+22,y:p.y-4},{x:p.x,y:p.y+6}],"#746a5c","#4a443c");
-  poly(ctx,[{x:p.x-14,y:p.y-2},{x:p.x,y:p.y-18},{x:p.x+11,y:p.y-4}],"#8a7f6e");
-  return;
- }
- const w=kind==="school"?39:kind==="shed"?22:32,h=kind==="school"?26:kind==="shed"?16:22;
- const roof=kind==="clinic"?"#d94b43":kind==="school"?"#3d6fa8":kind==="shed"?"#6b6b63":"#a74742";
- poly(ctx,[{x:p.x-w,y:p.y-7},{x:p.x,y:p.y-19},{x:p.x+w,y:p.y-7},{x:p.x,y:p.y+5}],"#b7a17d","#78654c");
- poly(ctx,[{x:p.x-w,y:p.y-7},{x:p.x,y:p.y+5},{x:p.x,y:p.y+h},{x:p.x-w,y:p.y+h-12}],"#c9b18a");
- poly(ctx,[{x:p.x,y:p.y+5},{x:p.x+w,y:p.y-7},{x:p.x+w,y:p.y+h-12},{x:p.x,y:p.y+h}],"#92795d");
- poly(ctx,[{x:p.x-w-3,y:p.y-7},{x:p.x,y:p.y-26},{x:p.x+w+3,y:p.y-7},{x:p.x,y:p.y+4}],roof,"#5c3a38");
- if(kind==="clinic"){ctx.fillStyle="#fff";ctx.fillRect(p.x-4,p.y-34,8,8);ctx.fillStyle="#d94b43";ctx.fillRect(p.x-1,p.y-33,2,6);ctx.fillRect(p.x-3,p.y-31,6,2);}
- if(kind==="school"){ctx.strokeStyle="#e8edf2";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(p.x,p.y-26);ctx.lineTo(p.x,p.y-38);ctx.stroke();ctx.fillStyle="#e8edf2";ctx.fillRect(p.x,p.y-38,10,6);}
- if(label){ctx.fillStyle="#f4e9d4";ctx.font="10px sans-serif";ctx.textAlign="center";ctx.fillText(label,p.x,p.y+h+14);}
-}
-function drawWorld(canvas,game,timeMs){
- const ctx=canvas.getContext("2d");if(!ctx)return;
- ctx.clearRect(0,0,900,520);
- const bg=ctx.createLinearGradient(0,0,0,520);bg.addColorStop(0,"#a8c982");bg.addColorStop(1,"#6f9c63");ctx.fillStyle=bg;ctx.fillRect(0,0,900,520);
- const sun=ctx.createRadialGradient(760,55,0,760,55,170);sun.addColorStop(0,"rgba(255,246,218,0.5)");sun.addColorStop(1,"rgba(255,246,218,0)");ctx.fillStyle=sun;ctx.fillRect(0,0,900,520);
- poly(ctx,[{x:0,y:360},{x:95,y:322},{x:210,y:350},{x:330,y:300},{x:440,y:327},{x:565,y:270},{x:680,y:300},{x:900,y:235},{x:900,y:520},{x:0,y:520}],"#6a9b72");
- poly(ctx,[{x:0,y:410},{x:120,y:370},{x:220,y:394},{x:330,y:355},{x:440,y:385},{x:570,y:328},{x:700,y:358},{x:900,y:295},{x:900,y:360},{x:700,y:420},{x:570,y:390},{x:440,y:445},{x:300,y:420},{x:170,y:455},{x:0,y:470}],"#4e9eb0");
- for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const p=iso(c,r);poly(ctx,[{x:p.x,y:p.y},{x:p.x+34,y:p.y+17},{x:p.x,y:p.y+34},{x:p.x-34,y:p.y+17}],(r+c)%2?"#83b66d":"#8cbd73","#78a965");}
- obstacles.forEach(o=>{
-  const p=iso(o.col,o.row);
-  if(o.kind==="water"){
-   const wob=Math.sin(timeMs/420+o.col*1.3+o.row*0.7)*3;
-   poly(ctx,[{x:p.x,y:p.y+wob},{x:p.x+34,y:p.y+17+wob},{x:p.x,y:p.y+34+wob},{x:p.x-34,y:p.y+17+wob}],"#3f8aa0","#2c6478");
-   ctx.strokeStyle="rgba(255,255,255,0.3)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p.x-16,p.y+17+wob);ctx.lineTo(p.x+16,p.y+17+wob);ctx.stroke();
-  } else {
-   building(ctx,p,o.kind,"");
-  }
- });
- const road=(a,b)=>{ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle="#c7b58d";ctx.lineWidth=17;ctx.lineCap="round";ctx.stroke();ctx.strokeStyle="#e0d1ad";ctx.lineWidth=11;ctx.stroke();};
- road(iso(1,4),iso(10,4));road(iso(5,1),iso(5,7));road(iso(1,2),iso(9,5));
- [[0,1],[1,0],[10,0],[11,2],[0,6],[10,7],[2,7],[7,7],[11,6],[3,0]].forEach(([c,r],i)=>{const p=iso(c,r);tree(ctx,p.x,p.y,0.8+(i%3)*.12)});
- sites.forEach(site=>{const p=iso(site.col,site.row);building(ctx,p,site.kind,site.name);});
- if(game.activePath&&game.activePath.length>1){
-  ctx.setLineDash([5,6]);ctx.strokeStyle="rgba(255,255,255,0.85)";ctx.lineWidth=2;ctx.beginPath();
-  game.activePath.forEach((cell,i)=>{const pp=iso(cell.col,cell.row);i?ctx.lineTo(pp.x,pp.y):ctx.moveTo(pp.x,pp.y);});
-  ctx.stroke();ctx.setLineDash([]);
- }
- sites.forEach(site=>{const p=iso(site.col,site.row);const done=game.saved[site.id]||0;ellipse(ctx,p.x,p.y-43,15,15,done>=site.survivors?"#285d43":"#d94b43");ctx.fillStyle="#fff";ctx.font="bold 12px sans-serif";ctx.textAlign="center";ctx.fillText(done>=site.survivors?"\u2713":String(site.survivors-done),p.x,p.y-39);if(game.target===site.id){ctx.beginPath();ctx.arc(p.x,p.y-43,22,0,Math.PI*2);ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.stroke();}});
- game.units.forEach(u=>{
-  const p=unitPosition(u);const bob=u.task?Math.sin(timeMs/180+u.col+u.row)*2:0;const y=p.y+bob;
-  ellipse(ctx,p.x,y+8,15,6,"rgba(20,30,22,0.45)");
-  ellipse(ctx,p.x,y-7,9,9,u.color);
-  ctx.fillStyle="#29332b";ctx.fillRect(p.x-5,y-1,10,12);
-  ctx.fillStyle="#fff";ctx.font="bold 9px sans-serif";ctx.textAlign="center";ctx.fillText(u.id[0].toUpperCase(),p.x,y+3);
-  if(u.role==="Medical"){ctx.fillStyle="#fff";ctx.fillRect(p.x-6,y-23,7,7);ctx.fillStyle="#d94b43";ctx.fillRect(p.x-3.5,y-22,2,5);ctx.fillRect(p.x-5.5,y-20,6,2);}
-  else if(u.role==="Supply"){ctx.fillStyle="#b9935a";ctx.fillRect(p.x+1,y-23,8,7);ctx.strokeStyle="#8a6a3c";ctx.strokeRect(p.x+1,y-23,8,7);}
-  else {ctx.strokeStyle="#f3eee3";ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(p.x+1,y-25);ctx.lineTo(p.x+8,y-18);ctx.stroke();}
-  if(game.selected===u.id){ctx.beginPath();ctx.arc(p.x,y-5,17,0,Math.PI*2);ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.stroke();}
- });
- ctx.fillStyle="rgba(18,34,27,.72)";ctx.fillRect(16,16,220,40);ctx.fillStyle="#fff";ctx.font="bold 12px sans-serif";ctx.textAlign="left";ctx.fillText("CHATKHIL \u00b7 FLOOD RESPONSE ZONE",28,41);
- const vg=ctx.createRadialGradient(450,260,170,450,260,540);vg.addColorStop(0,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(6,18,12,0.35)");ctx.fillStyle=vg;ctx.fillRect(0,0,900,520);
-}
 export default function RescueVillage({onBack,user,api,onProgress}){
  const canvasRef=useRef(null),gameRef=useRef(null),logRef=useRef([]),submittedRef=useRef(false);
  const [selected,setSelected]=useState("alpha"),[saved,setSaved]=useState({}),[unitsState,setUnitsState]=useState(unitsSeed.map(u=>({...u,task:null,path:null,stepProgress:0}))),[supplies,setSupplies]=useState({kits:6,water:8}),[seconds,setSeconds]=useState(180),[running,setRunning]=useState(true),[message,setMessage]=useState("Select a volunteer, then tap a marked location to assign a task. Teams route around rubble and flood water."),[target,setTarget]=useState(null),[submission,setSubmission]=useState(null);
@@ -95,7 +26,7 @@ export default function RescueVillage({onBack,user,api,onProgress}){
  useEffect(()=>{gameRef.current=game;});
  useEffect(()=>{
   let raf=0;
-  function loop(t){drawWorld(canvasRef.current,gameRef.current,t);raf=requestAnimationFrame(loop);}
+  function loop(t){drawWorld(canvasRef.current,gameRef.current,t,sites);raf=requestAnimationFrame(loop);}
   raf=requestAnimationFrame(loop);
   return ()=>cancelAnimationFrame(raf);
  },[]);
