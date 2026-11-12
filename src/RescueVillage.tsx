@@ -58,7 +58,8 @@ export default function RescueVillage({onBack,user,api,onProgress}){
   api("/api/rescue/attempts",{method:"POST",body:JSON.stringify({attemptId:crypto.randomUUID(),dispatches:logRef.current})}).then(d=>{setSubmission({xpAwarded:d.xpAwarded,survivorsRescued:d.survivorsRescued,completed:d.completed});onProgress?.();}).catch(e=>setSubmission({error:e.message}));
  },[complete,failed]);
  function dispatchSite(site){
-  if(complete||failed){setMessage("This operation has ended. Restart to play again.");return;}\n  if(!running){setMessage("Operation paused. Resume before issuing new orders.");return;}
+  if(complete||failed){setMessage("This operation has ended. Restart to play again.");return;}
+  if(!running){setMessage("Operation paused. Resume before issuing new orders.");return;}
   const u=unitsState.find(x=>x.id===selected);
   if(!u){setMessage("Select a volunteer first.");return;}
   if(u.task){setMessage(u.name+" is already on a task.");return;}
