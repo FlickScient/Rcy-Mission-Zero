@@ -246,7 +246,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
         const saved = state.saved[site.id] || 0, node = siteNodes.get(site.id);
         if (node) { node.ring.material.color.set(saved >= site.survivors ? "#6dbb79" : "#e85d50"); node.ring.rotation.z = t * .00025; node.cap.material.emissiveIntensity = .35 + Math.sin(t * .006) * .2; node.civilians.forEach((person, i) => { person.visible = i >= saved; person.rotation.y = Math.sin(t * .001 + person.userData.phase) * .08; }); }
       }
-      particles.forEach((p, i) => { p.position.y = 1.2 + (i % 5) * .5 + Math.sin(t * .0008 + i) * .12; p.position.x += Math.sin(t * .0003 + i) * .0008; });
+      particles.forEach((p, i) => { p.position.y = 1.2 + (i % 5) * .5 + Math.sin(t * .0008 + i) * .12; p.position.x = p.userData.baseX + Math.sin(t * .0003 + i) * .12; });
       world.children.filter(o => o.userData.ripple || o.userData.waterLine).forEach((o, i) => { o.rotation.z = Math.sin(t * .001 + i) * .15; });
       const route = state.activePath;
       if (route && route.length > 1) {
