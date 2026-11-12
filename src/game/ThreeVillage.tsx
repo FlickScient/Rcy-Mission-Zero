@@ -6,12 +6,45 @@ import { COLS, ROWS, obstacles } from "./grid";
 const TILE = 2.15;
 const point = (col, row, y = 0) => new THREE.Vector3((col - (COLS - 1) / 2) * TILE, y, (row - (ROWS - 1) / 2) * TILE);
 const mat = (color, roughness = .86, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
-const groundMats = ["#719b58", "#789f5e", "#6c9254", "#82a564"].map(c => mat(c));
+const makeTexture = (base, accent, count = 40) => {
+  const canvas = document.createElement("canvas"); canvas.width = canvas.height = 256;
+  const ctx = canvas.getContext("2d"); ctx.fillStyle = base; ctx.fillRect(0, 0, 256, 256);
+  let seed = base.length * 97 + accent.length * 31;
+  const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  for (let i = 0; i < count; i++) {
+    ctx.globalAlpha = .08 + rand() * .2; ctx.fillStyle = accent;
+    const x = rand() * 256, y = rand() * 256, w = 2 + rand() * 18, h = 1 + rand() * 5;
+    ctx.fillRect(x, y, w, h);
+  }
+  ctx.globalAlpha = 1;
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.anisotropy = 4; return texture;
+};
+const grassTexture = makeTexture("#789b5e", "#385f3c", 180);
+const wallTexture = makeTexture("#d7c39d", "#8c7759", 90);
+const roofTexture = makeTexture("#854e3b", "#492b25", 120);
+const roadTexture = makeTexture("#c5ad82", "#776347", 150);
+const waterTexture = makeTexture("#347f9b", "#b3e1d9", 75);
+const groundMats = ["#719b58", "#789f5e", "#6c9254", "#82a564"].map(c => mat(c, .96, { map: grassTexture }));
 const obstacleMap = new Map(obstacles.map(o => [o.col + "," + o.row, o.kind]));
 
 function addBox(parent, w, h, d, material, x, y, z, cast = true) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
   mesh.position.set(x, y, z); mesh.castShadow = cast; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+}
+function addRoadRibbon(parent, curve, width, y, material) {
+  const points = curve.getPoints(100), vertices = [], indices = [];
+  for (let i = 0; i < points.length; i++) {
+    const before = points[Math.max(0, i - 1)], after = points[Math.min(points.length - 1, i + 1)];
+    const dx = after.x - before.x, dz = after.z - before.z, length = Math.hypot(dx, dz) || 1;
+    const nx = -dz / length, nz = dx / length, p = points[i];
+    vertices.push(p.x + nx * width / 2, y, p.z + nz * width / 2, p.x - nx * width / 2, y, p.z - nz * width / 2);
+    if (i < points.length - 1) { const a = i * 2; indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setIndex(indices); geometry.computeVertexNormals();
+  const mesh = new THREE.Mesh(geometry, material); mesh.receiveShadow = true; mesh.position.y = .005; parent.add(mesh); return mesh;
 }
 function addTree(parent, x, z, scale = 1, variant = 0) {
   const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(scale); parent.add(g);
@@ -30,9 +63,9 @@ function addTree(parent, x, z, scale = 1, variant = 0) {
 function addHouse(parent, col, row, kind = "home", label = "") {
   const p = point(col, row); const g = new THREE.Group(); g.position.set(p.x, .03, p.z); parent.add(g);
   const scale = kind === "school" ? 1.22 : kind === "shed" ? .78 : kind === "clinic" ? 1.08 : 1;
-  const wall = mat(kind === "clinic" ? "#e5d9bd" : kind === "school" ? "#e6dfc8" : "#d7c39d");
-  const side = mat(kind === "clinic" ? "#b9aa8f" : "#ae936e");
-  const roof = mat(kind === "clinic" ? "#a9413c" : kind === "school" ? "#3d6380" : "#854e3b");
+  const wall = mat(kind === "clinic" ? "#e5d9bd" : kind === "school" ? "#e6dfc8" : "#d7c39d", .94, { map: wallTexture });
+  const side = mat(kind === "clinic" ? "#b9aa8f" : "#ae936e", .95, { map: wallTexture });
+  const roof = mat(kind === "clinic" ? "#a9413c" : kind === "school" ? "#3d6380" : "#854e3b", .78, { map: roofTexture });
   const base = addBox(g, 1.62 * scale, 1.05 * scale, 1.42 * scale, wall, 0, .63 * scale, 0);
   base.material = wall;
   addBox(g, .12, .92 * scale, 1.44 * scale, side, .82 * scale, .62 * scale, 0);
@@ -130,7 +163,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     base.position.y = -.32; base.receiveShadow = true; base.castShadow = true; world.add(base);
     for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
       const p = point(col, row), kind = obstacleMap.get(col + "," + row);
-      const tile = new THREE.Mesh(new THREE.BoxGeometry(TILE - .025, .12, TILE - .025), kind === "water" ? mat("#397e91", .28, { metalness: .08 }) : groundMats[(col * 7 + row * 3) % groundMats.length]);
+      const tile = new THREE.Mesh(new THREE.BoxGeometry(TILE - .025, .12, TILE - .025), kind === "water" ? mat("#397e91", .28, { metalness: .08, map: waterTexture }) : groundMats[(col * 7 + row * 3) % groundMats.length]);
       tile.position.set(p.x, -.025, p.z); tile.receiveShadow = true; world.add(tile);
       if (kind === "water") {
         const ripple = new THREE.Mesh(new THREE.TorusGeometry(.48, .018, 5, 28), mat("#b8e5df", .25, { transparent: true, opacity: .55 }));
