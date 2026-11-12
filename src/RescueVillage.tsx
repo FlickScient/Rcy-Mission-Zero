@@ -5,7 +5,8 @@ import {COLS,ROWS,obstacles} from "./game/grid";
 import {findPath} from "./game/pathfinding";
 import ThreeVillage from "./game/ThreeVillage";
 
-const STEP_TICKS=4;\nconst rescueCapacity=(unit,site)=>unit.role==="Medical"&&(site.kind==="clinic"||site.kind==="school")?2:1;
+const STEP_TICKS=4;
+const rescueCapacity=(unit,site)=>unit.role==="Medical"&&(site.kind==="clinic"||site.kind==="school")?2:1;
 const sites=[
   {id:"north",name:"North Hamlet",kind:"homes",col:2,row:2,survivors:2,need:"Rescue team"},
   {id:"school",name:"Village School",kind:"school",col:8,row:1,survivors:1,need:"Medical kit"},
@@ -42,7 +43,8 @@ export default function RescueVillage({onBack,user,api,onProgress}){
   const u=unitsState.find(x=>x.id===selected);
   if(!u){setMessage("Select a volunteer first.");return;}
   if(u.task){setMessage(u.name+" is already on a task.");return;}
-  const capacity=rescueCapacity(u,site),reserved=unitsState.filter(x=>x.task===site.id).reduce((sum,team)=>sum+rescueCapacity(team,site),0);\n  if((saved[site.id]||0)+reserved>=site.survivors){setMessage("All survivors at this location are already assigned or evacuated.");return;}
+  const capacity=rescueCapacity(u,site),reserved=unitsState.filter(x=>x.task===site.id).reduce((sum,team)=>sum+rescueCapacity(team,site),0);
+  if((saved[site.id]||0)+reserved>=site.survivors){setMessage("All survivors at this location are already assigned or evacuated.");return;}
   const route=findPath({col:u.col,row:u.row},{col:site.col,row:site.row});
   if(route===null){setMessage(u.name+" can't find a safe route to "+site.name+" \u2014 rubble or flood water is blocking every path right now.");return;}
   const travelPath=route.slice(1);
