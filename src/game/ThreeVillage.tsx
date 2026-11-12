@@ -228,8 +228,8 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     const activePointers = new Map();
     const target = new THREE.Vector3(0, 0, 0);
     function resize() {
-      const w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight), aspect = w / h, view = aspect < 1.15 ? 33 : 17;
-      camera.left = -view * aspect / 2; camera.right = view * aspect / 2; camera.top = view / 2; camera.bottom = -view / 2; camera.zoom = aspect < 1.15 ? 1.08 : 1; camera.updateProjectionMatrix(); renderer.setSize(w, h);
+      const w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight), aspect = w / h, view = aspect < 1.15 ? 38 : 22.5;
+      camera.left = -view * aspect / 2; camera.right = view * aspect / 2; camera.top = view / 2; camera.bottom = -view / 2; camera.zoom = 1; camera.updateProjectionMatrix(); renderer.setSize(w, h);
     }
     const observer = new ResizeObserver(resize); observer.observe(host); resize();
     function pointerStart(e) { activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); renderer.domElement.setPointerCapture(e.pointerId); if (activePointers.size === 2) { const pts = [...activePointers.values()]; pinchStart = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y); pinchZoom = camera.zoom; down = null; moved = true; return; } down = { x: e.clientX, y: e.clientY, id: e.pointerId }; moved = false; }
