@@ -23,7 +23,34 @@ export default function RescueVillage({onBack,user,api,onProgress}){
  const totalSaved=Object.values(saved).reduce((a,b)=>a+b,0),totalNeeded=sites.reduce((a,s)=>a+s.survivors,0),complete=totalSaved>=totalNeeded,allIdle=unitsState.every(u=>!u.task),failed=seconds===0||((supplies.kits===0||supplies.water===0)&&allIdle&&!complete);
  const activeUnit=unitsState.find(u=>u.id===selected);
  const game={saved,units:unitsState,selected,target,floodLevel:seconds<=90,activePath:activeUnit&&activeUnit.task?[{col:activeUnit.col,row:activeUnit.row},...(activeUnit.path||[])]:null};
- useEffect(()=>{if(!running||complete||failed||seconds<=0)return;const id=setInterval(()=>{setSeconds(s=>Math.max(0,s-1));const finished=[];setUnitsState(prev=>prev.map(u=>{if(!u.task||!u.path||u.path.length===0)return u;const stepProgress=u.stepProgress+(u.role==="Medical"?1.35:u.role==="Supply"?.85:1);if(stepProgress>=STEP_TICKS){const nextCell=u.path[0];const rest=u.path.slice(1);if(rest.length===0){const site=sites.find(x=>x.id===u.task);finished.push({unit:u.name,site,rescued:rescueCapacity(u,site),role:u.role});return {...u,col:nextCell.col,row:nextCell.row,task:null,path:null,stepProgress:0};}return {...u,col:nextCell.col,row:nextCell.row,path:rest,stepProgress:0};}return {...u,stepProgress};}));if(finished.length){setSaved(old=>finished.reduce((next,item)=>({...next,[item.site.id]:Math.min(item.site.survivors,(next[item.site.id]||0)+item.rescued)}),old));const supplyBonus=finished.filter(x=>x.role==="Supply").length*2;if(supplyBonus)setSupplies(v=>({...v,water:Math.min(12,v.water+supplyBonus)}));setMessage(finished.map(x=>x.unit+" evacuated "+x.rescued+" survivor"+(x.rescued===1?"":"s")+" from "+x.site.name+(x.role==="Supply"?" and recovered 2 water crates":"")+".").join(" "));}},1000);return()=>clearInterval(id);},[running,complete,failed,seconds]);
+ useEffect(() => {
+  if (!running || complete || failed || seconds <= 0) return;
+  const id = setInterval(() => {
+    setSeconds(current => Math.max(0, current - 1));
+    const finished = [];
+    const nextUnits = unitsState.map(unit => {
+      if (!unit.task || !unit.path || unit.path.length === 0) return unit;
+      const stepProgress = unit.stepProgress + (unit.role === "Medical" ? 1.35 : unit.role === "Supply" ? .85 : 1);
+      if (stepProgress < STEP_TICKS) return { ...unit, stepProgress };
+      const nextCell = unit.path[0], rest = unit.path.slice(1);
+      if (rest.length > 0) return { ...unit, col: nextCell.col, row: nextCell.row, path: rest, stepProgress: 0 };
+      const site = sites.find(item => item.id === unit.task);
+      finished.push({ unit: unit.name, site, rescued: rescueCapacity(unit, site), role: unit.role });
+      return { ...unit, col: nextCell.col, row: nextCell.row, task: null, path: null, stepProgress: 0 };
+    });
+    setUnitsState(nextUnits);
+    if (finished.length) {
+      setSaved(old => finished.reduce((next, item) => ({
+        ...next,
+        [item.site.id]: Math.min(item.site.survivors, (next[item.site.id] || 0) + item.rescued)
+      }), old));
+      const supplyBonus = finished.filter(item => item.role === "Supply").length * 2;
+      if (supplyBonus) setSupplies(value => ({ ...value, water: Math.min(12, value.water + supplyBonus) }));
+      setMessage(finished.map(item => item.unit + " evacuated " + item.rescued + " survivor" + (item.rescued === 1 ? "" : "s") + " from " + item.site.name + (item.role === "Supply" ? " and recovered 2 water crates" : "") + ".").join(" "));
+    }
+  }, 1000);
+  return () => clearInterval(id);
+ }, [running, complete, failed, seconds, unitsState]);
  useEffect(()=>{
   if(!(complete||failed)||submittedRef.current)return;
   submittedRef.current=true;
