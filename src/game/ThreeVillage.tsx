@@ -195,6 +195,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     for (const [key, kind] of buildingKinds) { const [c,r] = key.split(",").map(Number); addHouse(world, c, r, kind); }
     const siteNodes = new Map();
     const siteMeshes = [];
+    const lastSaved = Object.fromEntries(sites.map(site => [site.id, 0]));
     for (const site of sites) {
       const p = point(site.col, site.row);
       const ring = new THREE.Mesh(new THREE.TorusGeometry(.62, .055, 8, 40), mat("#e85d50", .45, { emissive: "#5b100d", emissiveIntensity: .22 }));
@@ -289,7 +290,33 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       }
       for (const site of sites) {
         const saved = state.saved[site.id] || 0, node = siteNodes.get(site.id);
-        if (node) { node.ring.material.color.set(saved >= site.survivors ? "#6dbb79" : "#e85d50"); node.ring.rotation.z = t * .00025; node.cap.material.emissiveIntensity = .35 + Math.sin(t * .006) * .2; node.civilians.forEach((person, i) => { person.visible = i >= saved; person.rotation.y = Math.sin(t * .001 + person.userData.phase) * .08; }); }
+        if (node) {
+          node.ring.material.color.set(saved >= site.survivors ? "#6dbb79" : "#e85d50");
+          node.ring.rotation.z = t * .00025;
+          node.cap.material.emissiveIntensity = .35 + Math.sin(t * .006) * .2;
+          if (saved < lastSaved[site.id]) {
+            node.civilians.forEach(person => {
+              person.userData.rescuing = false; person.userData.rescued = false; person.visible = true;
+              person.traverse(child => { if (child.material) (Array.isArray(child.material) ? child.material : [child.material]).forEach(material => { material.transparent = false; material.opacity = 1; }); });
+            });
+          }
+          node.civilians.forEach((person, i) => {
+            if (i < saved && !person.userData.rescuing && !person.userData.rescued) {
+              person.userData.rescuing = true; person.userData.rescueAt = t; person.userData.rescueOrigin = person.position.clone();
+              person.traverse(child => { if (child.material) (Array.isArray(child.material) ? child.material : [child.material]).forEach(material => { material.transparent = true; material.opacity = 1; }); });
+            }
+            if (person.userData.rescuing) {
+              const progress = THREE.MathUtils.clamp((t - person.userData.rescueAt) / 1250, 0, 1);
+              const origin = person.userData.rescueOrigin;
+              person.position.set(origin.x + .55 * progress, .04 + Math.sin(progress * Math.PI) * .9, origin.z - .35 * progress);
+              person.traverse(child => { if (child.material) (Array.isArray(child.material) ? child.material : [child.material]).forEach(material => { material.opacity = 1 - progress; }); });
+              if (progress >= 1) { person.userData.rescuing = false; person.userData.rescued = true; person.visible = false; }
+            } else if (i >= saved) {
+              person.visible = true; person.position.y = .04; person.rotation.y = Math.sin(t * .001 + person.userData.phase) * .08;
+            }
+          });
+          lastSaved[site.id] = saved;
+        }
       }
       particles.forEach((p, i) => { p.position.y = 1.2 + (i % 5) * .5 + Math.sin(t * .0008 + i) * .12; p.position.x = p.userData.baseX + Math.sin(t * .0003 + i) * .12; });
       world.children.filter(o => o.userData.ripple || o.userData.waterLine).forEach((o, i) => { o.rotation.z = Math.sin(t * .001 + i) * .15; });
