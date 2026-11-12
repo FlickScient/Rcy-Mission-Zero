@@ -174,8 +174,8 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     // Winding raised village road with a lighter gravel shoulder.
     const roadPoints = [[-12,-4.5],[-8,-4.2],[-5,-2.8],[-2,-2.3],[1,-.5],[4,-1.2],[7,-2.8],[11,-2.2],[12,-1.5]].map(([x,z]) => new THREE.Vector3(x,.075,z));
     const roadCurve = new THREE.CatmullRomCurve3(roadPoints);
-    const shoulder = new THREE.Mesh(new THREE.TubeGeometry(roadCurve, 90, .66, 8, false), mat("#9d8966")); shoulder.receiveShadow = true; world.add(shoulder);
-    const road = new THREE.Mesh(new THREE.TubeGeometry(roadCurve, 90, .48, 8, false), mat("#c5ad82")); road.receiveShadow = true; road.position.y = .045; world.add(road);
+    addRoadRibbon(world, roadCurve, 1.55, .085, mat("#9d8966", .96, { map: roadTexture }));
+    addRoadRibbon(world, roadCurve, 1.12, .12, mat("#c5ad82", .94, { map: roadTexture }));
     // Flood channel at the south edge, with banks, current ribbons and a timber crossing.
     const river = new THREE.Mesh(new THREE.BoxGeometry(29, .11, 3.2), mat("#347f9b", .2, { metalness: .16, transparent: true, opacity: .94 }));
     river.position.set(0, .11, 8.0); world.add(river);
