@@ -73,6 +73,15 @@ function addRubble(parent, col, row) {
     rock.rotation.set(i, i * .7, i * .4); rock.castShadow = true; g.add(rock);
   }
 }
+function addSurvivor(parent, x, z, index) {
+  const g = new THREE.Group(); g.position.set(x, .04, z); parent.add(g);
+  const clothes = mat(index % 2 ? "#e0a66d" : "#d8c7a4"), skin = mat("#bd8d6d"), dark = mat("#35433a");
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(.14, .25, 3, 7), clothes); body.position.y = .48; body.castShadow = true; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.12, 10, 8), skin); head.position.y = .82; head.castShadow = true; g.add(head);
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(.125, 10, 7, 0, Math.PI * 2, 0, Math.PI / 2), dark); hair.position.y = .88; g.add(hair);
+  const arm = new THREE.Mesh(new THREE.CapsuleGeometry(.045, .22, 3, 5), clothes); arm.position.set(.18, .5, 0); arm.rotation.z = -.5; g.add(arm);
+  g.userData.phase = index * 1.7; return g;
+}
 function addVolunteer(parent, unit) {
   const g = new THREE.Group(); g.userData.unitId = unit.id; parent.add(g);
   const uniform = mat(unit.color || "#e9e4d7"), dark = mat("#263b32"), skin = mat("#c99470"), helmet = mat(unit.role === "Medical" ? "#f0e9d7" : "#d5b96c");
@@ -161,7 +170,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       beacon.position.set(p.x, .68, p.z); world.add(beacon);
       const cap = new THREE.Mesh(new THREE.SphereGeometry(.14, 12, 8), mat("#ef5b4e", .3, { emissive: "#d72d24", emissiveIntensity: .5 }));
       cap.position.set(p.x, 1.28, p.z); cap.userData.siteId = site.id; world.add(cap); siteMeshes.push(cap);
-      siteNodes.set(site.id, { ring, cap });
+      const civilians = [];\n      for (let i = 0; i < site.survivors; i++) {\n        const civilian = addSurvivor(world, p.x + (i - (site.survivors - 1) / 2) * .52, p.z + .95, i);\n        civilians.push(civilian);\n      }\n      siteNodes.set(site.id, { ring, cap, civilians });
     }
     const unitNodes = new Map();
     for (const unit of liveRef.current.game.units) {
@@ -176,14 +185,14 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     const routeLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: "#fff0b8", transparent: true, opacity: .92 }));
     world.add(routeLine);
     const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
-    let down = null, moved = false, frame = 0, disposed = false;
+    let down = null, moved = false, frame = 0, disposed = false, pinchStart = 0, pinchZoom = 1;\n    const activePointers = new Map();
     const target = new THREE.Vector3(0, 0, 0);
     function resize() {
       const w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight), aspect = w / h, view = 17;
       camera.left = -view * aspect / 2; camera.right = view * aspect / 2; camera.top = view / 2; camera.bottom = -view / 2; camera.updateProjectionMatrix(); renderer.setSize(w, h);
     }
     const observer = new ResizeObserver(resize); observer.observe(host); resize();
-    function pointerStart(e) { down = { x: e.clientX, y: e.clientY, id: e.pointerId }; moved = false; renderer.domElement.setPointerCapture(e.pointerId); }
+    function pointerStart(e) { activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); renderer.domElement.setPointerCapture(e.pointerId); if (activePointers.size === 2) { const pts = [...activePointers.values()]; pinchStart = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y); pinchZoom = camera.zoom; down = null; moved = true; return; } down = { x: e.clientX, y: e.clientY, id: e.pointerId }; moved = false; }
     function pointerMove(e) {
       if (!down || down.id !== e.pointerId) return;
       const dx = e.clientX - down.x, dy = e.clientY - down.y;
@@ -235,7 +244,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       }
       for (const site of sites) {
         const saved = state.saved[site.id] || 0, node = siteNodes.get(site.id);
-        if (node) { node.ring.material.color.set(saved >= site.survivors ? "#6dbb79" : "#e85d50"); node.ring.rotation.z = t * .00025; node.cap.material.emissiveIntensity = .35 + Math.sin(t * .006) * .2; }
+        if (node) { node.ring.material.color.set(saved >= site.survivors ? "#6dbb79" : "#e85d50"); node.ring.rotation.z = t * .00025; node.cap.material.emissiveIntensity = .35 + Math.sin(t * .006) * .2; node.civilians.forEach((person, i) => { person.visible = i >= saved; person.rotation.y = Math.sin(t * .001 + person.userData.phase) * .08; }); }
       }
       particles.forEach((p, i) => { p.position.y = 1.2 + (i % 5) * .5 + Math.sin(t * .0008 + i) * .12; p.position.x += Math.sin(t * .0003 + i) * .0008; });
       world.children.filter(o => o.userData.ripple || o.userData.waterLine).forEach((o, i) => { o.rotation.z = Math.sin(t * .001 + i) * .15; });
@@ -247,11 +256,11 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       renderer.render(scene, camera);
     }
     animate(0);
-    sceneRef.current = { renderer, scene };
+    sceneRef.current = { renderer, scene, camera };
     return () => {
       disposed = true; cancelAnimationFrame(frame); observer.disconnect();
       renderer.domElement.removeEventListener("pointerdown", pointerStart); renderer.domElement.removeEventListener("pointermove", pointerMove); renderer.domElement.removeEventListener("pointerup", pointerEnd); renderer.domElement.removeEventListener("pointercancel", pointerEnd); renderer.domElement.removeEventListener("wheel", wheel);
-      renderer.dispose(); routeLine.geometry.dispose(); host.removeChild(renderer.domElement);
+      renderer.dispose(); routeLine.geometry.dispose(); host.removeChild(renderer.domElement); sceneRef.current = null;
       scene.traverse(obj => { if (obj.geometry) obj.geometry.dispose(); if (obj.material) (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach(m => m.dispose()); });
     };
   }, [sites]);
