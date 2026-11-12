@@ -84,3 +84,6 @@
 .rescue-map-tools{pointer-events:none;bottom:auto;top:12px;right:12px;left:auto}
 .rescue-map-tools span{padding:8px 11px;border:1px solid #ffffff40;border-radius:999px;background:#14251bdc;color:#f2f0e6;font:600 8px 'DM Mono',monospace;letter-spacing:.1em;backdrop-filter:blur(8px)}
 @media(max-width:700px){.rescue-map-wrap{height:430px;min-height:390px}.rescue-map-tools{top:8px;right:8px}.rescue-map-tools span{font-size:7px;padding:7px 9px}}
+
+.rescue-map-wrap:after{content:none}
+.rescue-map-wrap .three-village-canvas{display:block;width:100%;height:100%;aspect-ratio:auto;touch-action:none}
