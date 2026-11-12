@@ -1,9 +1,9 @@
 name: Mission Zero checks
 on:
   push:
-    branches: [main, mission-zero-complete-build]
+    branches: [main, mission-zero-complete-build, mission-zero-isometric-prototype]
   pull_request:
-    branches: [main]
+    branches: [main, mission-zero-complete-build]
 jobs:
   verify:
     runs-on: ubuntu-latest
