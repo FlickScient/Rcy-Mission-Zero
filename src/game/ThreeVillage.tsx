@@ -170,7 +170,12 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       beacon.position.set(p.x, .68, p.z); world.add(beacon);
       const cap = new THREE.Mesh(new THREE.SphereGeometry(.14, 12, 8), mat("#ef5b4e", .3, { emissive: "#d72d24", emissiveIntensity: .5 }));
       cap.position.set(p.x, 1.28, p.z); cap.userData.siteId = site.id; world.add(cap); siteMeshes.push(cap);
-      const civilians = [];\n      for (let i = 0; i < site.survivors; i++) {\n        const civilian = addSurvivor(world, p.x + (i - (site.survivors - 1) / 2) * .52, p.z + .95, i);\n        civilians.push(civilian);\n      }\n      siteNodes.set(site.id, { ring, cap, civilians });
+      const civilians = [];
+      for (let i = 0; i < site.survivors; i++) {
+        const civilian = addSurvivor(world, p.x + (i - (site.survivors - 1) / 2) * .52, p.z + .95, i);
+        civilians.push(civilian);
+      }
+      siteNodes.set(site.id, { ring, cap, civilians });
     }
     const unitNodes = new Map();
     for (const unit of liveRef.current.game.units) {
@@ -183,17 +188,20 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       dust.position.set(-14 + (i * 1.91) % 28, 1.2 + (i % 5) * .5, -8 + (i * 2.7) % 16); world.add(dust); particles.push(dust);
     }
     const routeLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: "#fff0b8", transparent: true, opacity: .92 }));
-    world.add(routeLine);
+    world.add(routeLine); let routeSignature = "";
     const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
-    let down = null, moved = false, frame = 0, disposed = false, pinchStart = 0, pinchZoom = 1;\n    const activePointers = new Map();
+    let down = null, moved = false, frame = 0, disposed = false, pinchStart = 0, pinchZoom = 1;
+    const activePointers = new Map();
     const target = new THREE.Vector3(0, 0, 0);
     function resize() {
-      const w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight), aspect = w / h, view = 17;
-      camera.left = -view * aspect / 2; camera.right = view * aspect / 2; camera.top = view / 2; camera.bottom = -view / 2; camera.updateProjectionMatrix(); renderer.setSize(w, h);
+      const w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight), aspect = w / h, view = aspect < 1.15 ? 33 : 17;
+      camera.left = -view * aspect / 2; camera.right = view * aspect / 2; camera.top = view / 2; camera.bottom = -view / 2; camera.zoom = aspect < 1.15 ? 1.08 : 1; camera.updateProjectionMatrix(); renderer.setSize(w, h);
     }
     const observer = new ResizeObserver(resize); observer.observe(host); resize();
     function pointerStart(e) { activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); renderer.domElement.setPointerCapture(e.pointerId); if (activePointers.size === 2) { const pts = [...activePointers.values()]; pinchStart = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y); pinchZoom = camera.zoom; down = null; moved = true; return; } down = { x: e.clientX, y: e.clientY, id: e.pointerId }; moved = false; }
     function pointerMove(e) {
+      if (activePointers.has(e.pointerId)) activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (activePointers.size >= 2) { const pts = [...activePointers.values()]; const distance = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y); if (pinchStart > 0) { camera.zoom = THREE.MathUtils.clamp(pinchZoom * distance / pinchStart, .72, 1.8); camera.updateProjectionMatrix(); } return; }
       if (!down || down.id !== e.pointerId) return;
       const dx = e.clientX - down.x, dy = e.clientY - down.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
@@ -201,7 +209,9 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       down.x = e.clientX; down.y = e.clientY;
     }
     function pointerEnd(e) {
-      if (!down || down.id !== e.pointerId) return;
+      activePointers.delete(e.pointerId);
+      if (activePointers.size < 2) pinchStart = 0;
+      if (!down || down.id !== e.pointerId) { if (activePointers.size === 0) down = null; return; }
       if (!moved) {
         const rect = renderer.domElement.getBoundingClientRect(); pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1; pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(pointer, camera);
@@ -228,6 +238,8 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       if (disposed) return;
       frame = requestAnimationFrame(animate);
       const state = liveRef.current.game;
+      river.position.y = state.floodLevel ? .2 : .11; river.scale.z = state.floodLevel ? 1.22 : 1;
+      river.material.color.set(state.floodLevel ? "#286f91" : "#347f9b");
       for (const [id, node] of unitNodes) {
         const unit = state.units.find(u => u.id === id); if (!unit) continue;
         let x = point(unit.col, unit.row).x, z = point(unit.col, unit.row).z, moving = !!(unit.path && unit.path.length);
@@ -249,10 +261,13 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       particles.forEach((p, i) => { p.position.y = 1.2 + (i % 5) * .5 + Math.sin(t * .0008 + i) * .12; p.position.x = p.userData.baseX + Math.sin(t * .0003 + i) * .12; });
       world.children.filter(o => o.userData.ripple || o.userData.waterLine).forEach((o, i) => { o.rotation.z = Math.sin(t * .001 + i) * .15; });
       const route = state.activePath;
-      if (route && route.length > 1) {
-        const pts = route.map(cell => point(cell.col, cell.row, .24));
-        routeLine.geometry.dispose(); routeLine.geometry = new THREE.BufferGeometry().setFromPoints(pts); routeLine.visible = true;
-      } else routeLine.visible = false;
+      const signature = route && route.length > 1 ? route.map(cell => cell.col + "," + cell.row).join("|") : "";
+      if (signature !== routeSignature) {
+        routeSignature = signature;
+        routeLine.geometry.dispose();
+        routeLine.geometry = signature ? new THREE.BufferGeometry().setFromPoints(route.map(cell => point(cell.col, cell.row, .24))) : new THREE.BufferGeometry();
+      }
+      routeLine.visible = !!signature;
       renderer.render(scene, camera);
     }
     animate(0);
