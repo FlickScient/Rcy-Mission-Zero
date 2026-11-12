@@ -39,7 +39,7 @@ function addRoadRibbon(parent, curve, width, y, material) {
     const dx = after.x - before.x, dz = after.z - before.z, length = Math.hypot(dx, dz) || 1;
     const nx = -dz / length, nz = dx / length, p = points[i];
     vertices.push(p.x + nx * width / 2, y, p.z + nz * width / 2, p.x - nx * width / 2, y, p.z - nz * width / 2);
-    if (i < points.length - 1) { const a = i * 2; indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    if (i < points.length - 1) { const a = i * 2; indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
