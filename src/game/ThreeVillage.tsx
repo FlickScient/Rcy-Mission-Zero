@@ -292,7 +292,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
         const saved = state.saved[site.id] || 0, node = siteNodes.get(site.id);
         if (node) {
           node.ring.material.color.set(saved >= site.survivors ? "#6dbb79" : "#e85d50");
-          node.ring.rotation.z = t * .00025;
+          node.ring.rotation.z = t * .00025; node.ring.scale.setScalar(state.target === site.id ? 1.18 : 1);
           node.cap.material.emissiveIntensity = .35 + Math.sin(t * .006) * .2;
           if (saved < lastSaved[site.id]) {
             node.civilians.forEach(person => {
