@@ -87,3 +87,9 @@
 
 .rescue-map-wrap:after{content:none}
 .rescue-map-wrap .three-village-canvas{display:block;width:100%;height:100%;aspect-ratio:auto;touch-action:none}
+
+.rescue-flood-warning{display:inline-flex;align-items:center;gap:8px;margin-top:11px;padding:8px 11px;border:1px solid #bd695c88;border-radius:8px;background:#49251f;color:#ffd0b5;font:700 9px 'DM Mono',monospace;letter-spacing:.08em;box-shadow:0 0 18px #d94b4322}
+.rescue-paused-overlay{position:absolute;z-index:4;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#101a17b8;backdrop-filter:blur(5px);color:#f4f1e7;text-align:center}
+.rescue-paused-overlay span{font:600 9px 'DM Mono',monospace;letter-spacing:.16em;color:#d5c18b}
+.rescue-paused-overlay b{font:700 clamp(25px,4vw,40px) 'Space Grotesk',sans-serif;letter-spacing:-.04em}
+.rescue-paused-overlay button{margin-top:8px;padding:12px 18px;border:1px solid #d4bd79;background:#294632;color:#f8f1dc;border-radius:9px;font:700 10px 'DM Mono',monospace;letter-spacing:.08em}
