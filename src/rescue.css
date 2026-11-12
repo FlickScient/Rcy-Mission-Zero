@@ -75,3 +75,12 @@
 .rescue-pause{margin-top:12px;min-height:40px;padding:0 16px;border:1px solid #d6b96d66;border-radius:10px;background:#18392b;color:#f5e9c8;font:700 10px 'Space Grotesk',sans-serif;letter-spacing:.1em;cursor:pointer}
 .rescue-pause:hover{background:#28523b}
 .rescue-pause:focus-visible{outline:3px solid #f0c66b;outline-offset:3px}
+
+/* Three.js rescue-world viewport */
+.rescue-map-wrap{height:clamp(430px,54vw,650px);min-height:390px;background:linear-gradient(145deg,#9bb4a1,#526e60)}
+.three-village-host{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;touch-action:none;cursor:grab}
+.three-village-host:active{cursor:grabbing}
+.three-village-canvas{display:block;width:100%;height:100%;outline:none;touch-action:none}
+.rescue-map-tools{pointer-events:none;bottom:auto;top:12px;right:12px;left:auto}
+.rescue-map-tools span{padding:8px 11px;border:1px solid #ffffff40;border-radius:999px;background:#14251bdc;color:#f2f0e6;font:600 8px 'DM Mono',monospace;letter-spacing:.1em;backdrop-filter:blur(8px)}
+@media(max-width:700px){.rescue-map-wrap{height:430px;min-height:390px}.rescue-map-tools{top:8px;right:8px}.rescue-map-tools span{font-size:7px;padding:7px 9px}}
