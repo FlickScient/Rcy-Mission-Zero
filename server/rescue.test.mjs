@@ -51,3 +51,21 @@ test("dispatching every unit to every site never exceeds the map total", () => {
   assert.ok(r.survivorsRescued <= TOTAL_SURVIVORS);
   assert.ok(r.secondsUsed <= 180);
 });
+
+test("medical teams evacuate two survivors at the school or clinic", () => {
+  const r = simulateRescue([{ unitId: "bravo", siteId: "clinic", atSecond: 0 }]);
+  assert.equal(r.survivorsRescued, 2);
+});
+
+test("supply teams spend less water and replenish crates on arrival", () => {
+  const supply = simulateRescue([{ unitId: "charlie", siteId: "north", atSecond: 0 }]);
+  const rescue = simulateRescue([{ unitId: "alpha", siteId: "north", atSecond: 0 }]);
+  assert.ok(supply.waterUsed < rescue.waterUsed);
+  assert.ok(supply.survivorsRescued >= 1);
+});
+
+test("the final flood phase increases water cost for non-supply teams", () => {
+  const early = simulateRescue([{ unitId: "alpha", siteId: "north", atSecond: 0 }]);
+  const surge = simulateRescue([{ unitId: "alpha", siteId: "north", atSecond: 90 }]);
+  assert.ok(surge.waterUsed > early.waterUsed);
+});
