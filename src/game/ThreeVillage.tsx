@@ -363,18 +363,34 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       person.userData.phase=i*1.9;person.userData.homeX=start[0];person.userData.homeZ=start[1];
       return person;
     });
+    const evacuationPoint = new THREE.Vector3(0,.04,-13.2);
+    const safeMarker = new THREE.Group(); safeMarker.position.copy(evacuationPoint); world.add(safeMarker);
+    const safeRing = new THREE.Mesh(new THREE.RingGeometry(1.15,1.42,36),mat("#8bd39a",.45,{emissive:"#397c4d",emissiveIntensity:.5}));
+    safeRing.rotation.x=-Math.PI/2;safeRing.position.y=.04;safeMarker.add(safeRing);
+    const safeBeacon = new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,2.2,8),mat("#9ee6a6",.4,{emissive:"#4b9b61",emissiveIntensity:.65}));
+    safeBeacon.position.y=1.15;safeMarker.add(safeBeacon);
     actionRef.current=()=>{
-      let nearest=null,nearestDistance=2.7;
+      const playerAtSafe=Math.hypot(player.position.x-evacuationPoint.x,player.position.z-evacuationPoint.z)<3.1;
+      if(playerAtSafe){
+        let escorted=0;
+        for(const person of pedestrians)if(person.userData.state==="following"){
+          person.userData.state="sheltered";person.userData.alert.visible=false;person.userData.safeAt=performance.now();
+          person.traverse(child=>{if(child.material?.color&&child.material.color.set)child.material.color.set("#79a879");});
+          escorted++;
+        }
+        setInteractionMessage(escorted?escorted+" civilian(s) checked in at the safe evacuation zone.":"Safe zone reached. No civilians are following you.");
+        return;
+      }
+      let nearest=null,nearestDistance=2.8;
       for(const person of pedestrians){
-        if(person.userData.state==="assisted")continue;
+        if(person.userData.state==="sheltered"||person.userData.state==="following")continue;
         const distance=Math.hypot(person.position.x-player.position.x,person.position.z-player.position.z);
         if(distance<nearestDistance){nearest=person;nearestDistance=distance;}
       }
-      if(!nearest){setInteractionMessage("No civilian close enough. Move nearer and press E / HELP.");return;}
-      nearest.userData.state="assisted";nearest.userData.alert.visible=false;
-      nearest.userData.assistedAt=performance.now();
-      nearest.traverse(child=>{if(child.material?.color&&child.material.color.set)child.material.color.set("#79a879");});
-      setInteractionMessage("Civilian assisted. They are safe for this scenario.");
+      if(!nearest){setInteractionMessage("No civilian nearby. Move within reach, or escort followers to the green safe-zone beacon.");return;}
+      nearest.userData.state="following";nearest.userData.alert.visible=true;nearest.userData.followOffset=(pedestrians.indexOf(nearest)%3-1)*.7;
+      nearest.traverse(child=>{if(child.material?.color&&child.material.color.set)child.material.color.set("#d7bd79");});
+      setInteractionMessage("Civilian is following you. Lead them to the green evacuation beacon and press HELP to check them in.");
     };
 
 
@@ -451,28 +467,35 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       const gait=walking?Math.sin(t*(speed>4? .018:.013))*.48:0;
       const gaitPhases=[1,-1,-1,1];limbs.forEach((limb,i)=>{limb.rotation.x=walking?gait*gaitPhases[i]:0;});
       player.position.y=.04+(walking?Math.abs(Math.sin(t*.014))*.035:0);
-      // Civilian behaviour: independent patrols, visible panic response and evacuation to the safe north street.
+      // Civilian state machine: patrol, panic, follow the player, and shelter at the safe zone.
+      safeMarker.rotation.y=t*.00035;safeRing.material.emissiveIntensity=.38+Math.sin(t*.004)*.2;
       for(const person of pedestrians){
         const evacuating=!!state.floodLevel;
-        if(person.userData.state==="assisted"){person.userData.alert.visible=false;continue;}
-        if(person.userData.state!=="sheltered")person.userData.state=evacuating?"evacuating":"walking";
-        person.userData.alert.visible=evacuating;
-        let destination;
-        if(evacuating){
-          const safeZ=-12.4,dx=person.position.x-person.userData.homeX;
-          destination=new THREE.Vector3(THREE.MathUtils.clamp(person.userData.homeX,-8.5,8.5),.04,safeZ+(person.userData.pedestrianId%3)*.42);
-        }else{
-          const route=person.userData.route,wp=route[person.userData.waypoint%route.length];
-          destination=new THREE.Vector3(wp[0],.04,wp[1]);
+        if(person.userData.state==="sheltered"){person.userData.alert.visible=false;continue;}
+        if(evacuating&&person.userData.state==="walking")person.userData.state="evacuating";
+        if(person.userData.state==="following"&&!evacuating){
+          const offset=person.userData.followOffset||0;
+          destinationForPerson: {
+            const destination=new THREE.Vector3(player.position.x+Math.sin(player.rotation.y)*1.15+offset,.04,player.position.z-Math.cos(player.rotation.y)*1.15);
+            const dx=destination.x-person.position.x,dz=destination.z-person.position.z,dist=Math.hypot(dx,dz);
+            if(dist>.7){const step=Math.min(dist,2.8*dt);person.position.x+=dx/dist*step;person.position.z+=dz/dist*step;person.rotation.y=Math.atan2(dx,dz);}
+            person.userData.alert.visible=true;
+            const gait=Math.sin(t*.02+person.userData.phase)*.38;person.userData.limbs.forEach((limb,i)=>{limb.rotation.x=gait*(i%2?-1:1);});
+            person.position.y=.04+Math.abs(Math.sin(t*.014+person.userData.phase))*.025;
+          }
+          continue;
         }
+        person.userData.alert.visible=evacuating||person.userData.state==="following";
+        let destination;
+        if(evacuating)destination=new THREE.Vector3(THREE.MathUtils.clamp(person.userData.homeX,-8.5,8.5),.04,evacuationPoint.z+(person.userData.pedestrianId%3-1)*.42);
+        else {const route=person.userData.route,wp=route[person.userData.waypoint%route.length];destination=new THREE.Vector3(wp[0],.04,wp[1]);}
         const dx=destination.x-person.position.x,dz=destination.z-person.position.z,dist=Math.hypot(dx,dz);
         if(dist<.22){
-          if(evacuating){person.userData.state="sheltered";person.userData.alert.visible=false;}
+          if(evacuating){person.userData.state="sheltered";person.userData.alert.visible=false;person.userData.safeAt=t;}
           else person.userData.waypoint=(person.userData.waypoint+1)%person.userData.route.length;
         }else{
           const speed=evacuating?2.45:person.userData.speed,step=Math.min(dist,speed*dt);
-          person.position.x+=dx/dist*step;person.position.z+=dz/dist*step;
-          person.rotation.y=Math.atan2(dx,dz);
+          person.position.x+=dx/dist*step;person.position.z+=dz/dist*step;person.rotation.y=Math.atan2(dx,dz);
           const gait=Math.sin(t*(evacuating?.022:.014)+person.userData.phase)*.42;
           person.userData.limbs.forEach((limb,i)=>{limb.rotation.x=gait*(i%2?-1:1);});
           person.position.y=.04+Math.abs(Math.sin(t*.014+person.userData.phase))*.025;
