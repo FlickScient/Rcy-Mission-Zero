@@ -361,6 +361,8 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       const person=addPedestrian(world,i),start=route[0];person.position.set(start[0],.04,start[1]);
       person.userData.route=route;person.userData.waypoint=1;person.userData.speed=1.05+(i%3)*.12;
       person.userData.phase=i*1.9;person.userData.homeX=start[0];person.userData.homeZ=start[1];
+      person.userData.injured=i===3;
+      if(person.userData.injured){person.userData.state="injured";person.userData.alert.visible=true;person.userData.alert.material.color.set("#e45c50");person.userData.alert.material.emissive.set("#9b2924");}
       return person;
     });
     const evacuationPoint = new THREE.Vector3(0,.04,-13.2);
@@ -391,9 +393,10 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
         if(distance<nearestDistance){nearest=person;nearestDistance=distance;}
       }
       if(!nearest){setInteractionMessage("No civilian nearby. Move within reach, or escort followers to the green safe-zone beacon.");return;}
-      nearest.userData.state="following";nearest.userData.alert.visible=true;nearest.userData.followOffset=(pedestrians.indexOf(nearest)%3-1)*.7;
+      const wasInjured=nearest.userData.injured;
+      nearest.userData.state="following";nearest.userData.injured=false;nearest.userData.alert.visible=true;nearest.userData.followOffset=(pedestrians.indexOf(nearest)%3-1)*.7;
       nearest.traverse(child=>{if(child.material?.color&&child.material.color.set)child.material.color.set("#d7bd79");});
-      setInteractionMessage("Civilian is following you. Lead them to the green evacuation beacon and press HELP to check them in.");
+      setInteractionMessage(wasInjured?"You stabilized the injured civilian. Escort them to the green evacuation beacon and press HELP to check them in.":"Civilian is following you. Lead them to the green evacuation beacon and press HELP to check them in.");
     };
 
 
@@ -475,7 +478,8 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       for(const person of pedestrians){
         const evacuating=!!state.floodLevel;
         if(person.userData.state==="sheltered"){person.userData.alert.visible=false;continue;}
-        if(evacuating&&person.userData.state==="walking")person.userData.state="evacuating";
+        if(evacuating&&(person.userData.state==="walking"||person.userData.state==="injured"))person.userData.state="evacuating";
+        if(person.userData.state==="injured"&&!evacuating){person.userData.alert.visible=true;person.userData.alert.position.y=1.12+Math.sin(t*.008+person.userData.phase)*.07;continue;}
         if(person.userData.state==="following"&&!evacuating){
           const offset=person.userData.followOffset||0;
           destinationForPerson: {
@@ -497,7 +501,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
           if(evacuating){person.userData.state="sheltered";person.userData.alert.visible=false;person.userData.safeAt=t;}
           else person.userData.waypoint=(person.userData.waypoint+1)%person.userData.route.length;
         }else{
-          const speed=evacuating?2.45:person.userData.speed,step=Math.min(dist,speed*dt);
+          const speed=evacuating?(person.userData.injured?1.05:2.45):person.userData.speed,step=Math.min(dist,speed*dt);
           person.position.x+=dx/dist*step;person.position.z+=dz/dist*step;person.rotation.y=Math.atan2(dx,dz);
           const gait=Math.sin(t*(evacuating?.022:.014)+person.userData.phase)*.42;
           person.userData.limbs.forEach((limb,i)=>{limb.rotation.x=gait*(i%2?-1:1);});
