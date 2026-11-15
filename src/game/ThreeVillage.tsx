@@ -60,6 +60,59 @@ function addTree(parent, x, z, scale = 1, variant = 0) {
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = .025; shadow.scale.set(1.2, .8, 1); g.add(shadow);
   return g;
 }
+function addCityBuilding(parent, x, z, width, depth, floors, variant = 0) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); parent.add(g);
+  const palettes = [
+    ["#d5d0c1","#a9a493","#4e6874"], ["#c6b69d","#96866f","#8d5947"],
+    ["#b9c7c2","#899d98","#526f72"], ["#d9c7a9","#a68e70","#647d87"]
+  ];
+  const palette = palettes[variant % palettes.length], height = floors * 1.65;
+  const wall = mat(palette[0], .88), side = mat(palette[1], .9), glass = new THREE.MeshStandardMaterial({color:palette[2],metalness:.28,roughness:.24});
+  addBox(g,width,height,depth,wall,0,height/2,0);
+  addBox(g,.12,height,depth+.04,side,width/2+.02,height/2,0);
+  // Repeated window bays and floor slabs make the blocks read as real multi-storey buildings.
+  for(let floor=0;floor<floors;floor++){
+    const y=.48+floor*1.65;
+    addBox(g,width+.12,.12,depth+.12,side,0,y,0,false);
+    const bays=Math.max(2,Math.floor(width/1.15));
+    for(let bay=0;bay<bays;bay++){
+      const wx=-width/2+.55+(bay*(width-1.1)/Math.max(1,bays-1));
+      addBox(g,.55,.76,.055,glass,wx,y+.48,depth/2+.035,false);
+      addBox(g,.55,.76,.055,glass,wx,y+.48,-depth/2-.035,false);
+      addBox(g,.045,.82,.075,side,wx,y+.48,depth/2+.07,false);
+    }
+    for(let bay=0;bay<2;bay++){
+      const wz=-depth/2+.65+bay*(depth-1.3);
+      addBox(g,.055,.76,.52,glass,width/2+.04,y+.48,wz,false);
+      addBox(g,.055,.76,.52,glass,-width/2-.04,y+.48,wz,false);
+    }
+  }
+  // Flat roof, parapet, rooftop equipment and a small water tank.
+  addBox(g,width+.25,.18,depth+.25,mat("#77776d"),0,height+.08,0);
+  for(const edge of [-1,1]){
+    addBox(g,width+.25,.42,.12,side,0,height+.32,edge*(depth/2+.04));
+    addBox(g,.12,.42,depth+.25,side,edge*(width/2+.04),height+.32,0);
+  }
+  addBox(g,.85,.42,.72,mat("#747d79"),width*.22,height+.36,-depth*.18);
+  const tank=new THREE.Mesh(new THREE.CylinderGeometry(.36,.36,.62,12),mat("#8a9b99"));
+  tank.position.set(-width*.22,height+.48,depth*.18);tank.castShadow=true;g.add(tank);
+  // Ground-floor shopfront and awning.
+  addBox(g,width*.48,.72,.07,glass,0,.72,depth/2+.055,false);
+  addBox(g,width*.58,.14,.72,mat(variant%2?"#a94e40":"#d2a85f"),0,1.24,depth/2+.32);
+  addBox(g,.78,.1,.08,mat("#f0e6d2"),0,1.68,depth/2+.08,false);
+  return {group:g,x,z,width,depth};
+}
+function addCityCar(parent,x,z,color="#b9c4c1",rotation=0){
+  const g=new THREE.Group();g.position.set(x,.08,z);g.rotation.y=rotation;parent.add(g);
+  addBox(g,1.05,.42,2.05,mat(color,.48,{metalness:.22}),0,.42,0);
+  addBox(g,.88,.42,1.02,new THREE.MeshStandardMaterial({color:"#77949b",metalness:.3,roughness:.2,transparent:true,opacity:.88}),0,.78,-.12);
+  for(const side of [-1,1])for(const end of [-1,1]){
+    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.19,.19,.13,12),mat("#202522"));
+    wheel.rotation.z=Math.PI/2;wheel.position.set(side*.55,.23,end*.67);wheel.castShadow=true;g.add(wheel);
+  }
+  addBox(g,.22,.12,.06,mat("#f2dfaa"),-.3,.42,1.04,false);addBox(g,.22,.12,.06,mat("#f2dfaa"),.3,.42,1.04,false);
+  return g;
+}
 function addHouse(parent, col, row, kind = "home", label = "") {
   const p = point(col, row); const g = new THREE.Group(); g.position.set(p.x, .03, p.z); parent.add(g);
   const scale = kind === "school" ? 1.22 : kind === "shed" ? .78 : kind === "clinic" ? 1.08 : 1;
@@ -164,8 +217,34 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     const fill = new THREE.DirectionalLight("#a8d4e3", .8); fill.position.set(14, 9, -12); scene.add(fill);
     const world = new THREE.Group(); scene.add(world);
     // Raised earth plinth and a continuous, textured-looking tile field.
-    const base = new THREE.Mesh(new THREE.BoxGeometry(COLS * TILE + 1, .55, ROWS * TILE + 1), mat("#665e45"));
+    const base = new THREE.Mesh(new THREE.BoxGeometry(68, .55, 52), mat("#665e45"));
     base.position.y = -.32; base.receiveShadow = true; base.castShadow = true; world.add(base);
+    const cityGround = new THREE.Mesh(new THREE.PlaneGeometry(68,52),mat("#89906e",.98));
+    cityGround.rotation.x=-Math.PI/2;cityGround.position.y=-.045;cityGround.receiveShadow=true;world.add(cityGround);
+    // Connected outer neighbourhood: urban streets, sidewalks, mixed-use blocks and parked vehicles.
+    const asphalt=mat("#555b59",.96), pavement=mat("#b8b19e",.94), lane=mat("#e5d5a9",.75);
+    for(const z of [-18,-9,9,18]){
+      const road=new THREE.Mesh(new THREE.PlaneGeometry(66,5.2),asphalt);road.rotation.x=-Math.PI/2;road.position.set(0,.012,z);road.receiveShadow=true;world.add(road);
+      for(let x=-31;x<32;x+=4.2)addBox(world,2.1,.018,.075,lane,x,.03,z,false);
+      for(const side of [-1,1]){const walk=new THREE.Mesh(new THREE.BoxGeometry(66,.12,1.05),pavement);walk.position.set(0,.04,z+side*3.05);walk.receiveShadow=true;world.add(walk);}
+    }
+    for(const x of [-24,-12,0,12,24]){
+      const road=new THREE.Mesh(new THREE.PlaneGeometry(5.2,48),asphalt);road.rotation.x=-Math.PI/2;road.position.set(x,.016,0);road.receiveShadow=true;world.add(road);
+      for(let z=-22;z<23;z+=4.2)addBox(world,.075,.018,2.1,lane,x,.035,z,false);
+    }
+    const cityBuildings=[
+      addCityBuilding(world,-25,-14,6.2,5.2,3,0),addCityBuilding(world,-15,-14,5.4,5.4,2,1),
+      addCityBuilding(world,-25,0,6.4,5.8,4,2),addCityBuilding(world,-15,14,6.2,5.2,3,3),
+      addCityBuilding(world,-25,14,5.5,5.4,2,1),addCityBuilding(world,15,-14,6.5,5.4,3,2),
+      addCityBuilding(world,25,-14,5.6,5.5,2,3),addCityBuilding(world,15,0,6.4,5.8,4,0),
+      addCityBuilding(world,25,0,5.4,5.4,3,1),addCityBuilding(world,15,14,6.2,5.2,3,3),
+      addCityBuilding(world,25,14,5.8,5.4,2,2),addCityBuilding(world,-5,-19,5.4,4.8,2,0)
+    ];
+    const cityCars=[
+      addCityCar(world,-20,-9,"#b7c4bf",Math.PI/2),addCityCar(world,20,-9,"#bd6d55",-Math.PI/2),
+      addCityCar(world,-20,9,"#d2b66f",Math.PI/2),addCityCar(world,20,9,"#7d9baf",-Math.PI/2),
+      addCityCar(world,-7,19,"#c5c8c1",0),addCityCar(world,7,-19,"#8c9a82",Math.PI)
+    ];
     for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
       const p = point(col, row), kind = obstacleMap.get(col + "," + row);
       const tile = new THREE.Mesh(new THREE.BoxGeometry(TILE - .025, .12, TILE - .025), kind === "water" ? mat("#397e91", .28, { metalness: .08, map: waterTexture }) : groundMats[(col * 7 + row * 3) % groundMats.length]);
@@ -244,6 +323,8 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       if(x < -13.1 || x > 13.1 || z < -8.6 || z > 6.25)return true;
       for(const [c,r] of buildingCells){const p=point(c,r);if(Math.abs(x-p.x)<1.12&&Math.abs(z-p.z)<.98)return true;}
       for(const [tx,tz] of treeSpots)if(Math.hypot(x-tx,z-tz)<.78)return true;
+      for(const b of cityBuildings)if(Math.abs(x-b.x)<b.width/2+.55&&Math.abs(z-b.z)<b.depth/2+.55)return true;
+      for(const car of cityCars){const dx=x-car.position.x,dz=z-car.position.z;if(Math.abs(dx)<.8&&Math.abs(dz)<1.25)return true;}
       for(const o of obstacles)if(o.kind==="rubble"||o.kind==="water"){const p=point(o.col,o.row);if(Math.abs(x-p.x)<.78&&Math.abs(z-p.z)<.78)return true;}
       return false;
     };
