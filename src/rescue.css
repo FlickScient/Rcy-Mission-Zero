@@ -103,3 +103,10 @@
 .player-sprint{position:absolute;z-index:5;right:15px;bottom:20px;width:76px;height:48px;font-size:10px;letter-spacing:.08em;background:linear-gradient(145deg,#8c5935,#593522)}
 .player-control-hint{position:absolute;z-index:4;left:50%;bottom:13px;transform:translateX(-50%);padding:7px 10px;border:1px solid #ffffff30;border-radius:999px;background:#14251bd9;color:#f2f0e6;font:600 8px 'DM Mono',monospace;letter-spacing:.07em;white-space:nowrap;pointer-events:none}
 @media(max-width:700px){.player-control-pad{left:8px;bottom:9px;gap:4px;padding:6px;border-radius:14px}.player-control-pad button{width:37px;height:35px;font-size:15px}.player-sprint{right:8px;bottom:12px;width:66px;height:42px;font-size:9px}.player-control-hint{bottom:12px;font-size:6px;padding:6px 8px}}
+
+/* Phase 2 — civilian AI and nearby assistance HUD */
+.civilian-interaction{position:absolute;z-index:6;left:50%;top:12px;transform:translateX(-50%);display:flex;align-items:center;gap:9px;max-width:min(560px,calc(100% - 190px));padding:8px 10px 8px 13px;border:1px solid #e6c77c66;border-radius:12px;background:#17271fe8;backdrop-filter:blur(9px);box-shadow:0 8px 24px #0004;color:#e8eadc;font:500 9px 'DM Mono',monospace}
+.civilian-interaction span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.civilian-interaction button{flex:none;padding:8px 10px;border:1px solid #d8bb74;border-radius:8px;background:#6b5030;color:#fff4d8;font:700 9px 'DM Mono',monospace;letter-spacing:.04em;cursor:pointer}
+.civilian-interaction button:active{transform:scale(.96);background:#8b6a3b}
+@media(max-width:700px){.civilian-interaction{top:8px;max-width:calc(100% - 150px);gap:5px;padding:6px 7px 6px 9px;border-radius:9px}.civilian-interaction span{font-size:7px;max-width:145px}.civilian-interaction button{padding:7px 8px;font-size:7px;white-space:nowrap}}
