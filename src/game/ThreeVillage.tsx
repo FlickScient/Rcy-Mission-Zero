@@ -267,10 +267,10 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       const ripple = new THREE.Mesh(new THREE.TorusGeometry(.34 + (i % 3) * .12, .018, 4, 20), mat("#b6e3d8", .22, { transparent: true, opacity: .42 }));
       ripple.rotation.x = Math.PI / 2; ripple.position.set(-13 + i * 1.7, .19, 7.5 + Math.sin(i) * .55); ripple.userData.waterLine = true; world.add(ripple);
     }
-    const bridge = new THREE.Group(); bridge.position.set(7.8, .28, 6.1); world.add(bridge);
-    addBox(bridge, 3.7, .22, 1.5, mat("#806044"), 0, .25, 0);
-    for (let i = 0; i < 9; i++) addBox(bridge, .38, .035, 1.43, mat("#c49a68"), -1.62 + i * .405, .38, 0, false);
-    for (const side of [-1, 1]) addBox(bridge, 3.7, .12, .12, mat("#614a35"), 0, .62, side * .72);
+    const bridge = new THREE.Group(); bridge.position.set(7.8, .28, 8.0); world.add(bridge);
+    addBox(bridge, 1.5, .22, 4.1, mat("#806044"), 0, .25, 0);
+    for (let i = 0; i < 9; i++) addBox(bridge, 1.43, .035, .38, mat("#c49a68"), 0, .38, -1.8 + i * .45, false);
+    for (const side of [-1, 1]) addBox(bridge, .12, .12, 4.1, mat("#614a35"), side * .72, .62, 0);
     // Densely planted tree belts, palms, shrubs and scattered village greenery.
     const treeSpots = [[-13,-7],[-10,-6],[-7,-7],[-3,-7],[1,-7],[5,-7],[9,-7],[13,-6],[-14,-2],[-13,2],[-12,6],[-10,7],[-7,6],[-4,7],[-1,7],[2,7],[5,7],[10,7],[13,5],[13,1],[12,-3],[-9,1],[-6,3],[10,1],[4,3],[-2,4]];
     const trees = treeSpots.map(([x,z], i) => addTree(world, x, z, .76 + (i % 4) * .11, i));
