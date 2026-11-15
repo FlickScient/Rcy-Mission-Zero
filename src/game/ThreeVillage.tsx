@@ -281,7 +281,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       if (!down || down.id !== e.pointerId) return;
       const dx = e.clientX - down.x, dy = e.clientY - down.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
-      if (moved) { target.x -= dx * .026 / camera.zoom; target.z -= dy * .026 / camera.zoom; camera.position.x -= dx * .026 / camera.zoom; camera.position.z -= dy * .026 / camera.zoom; camera.lookAt(target); }
+      if (moved) { cameraOffset.x -= dx * .026 / camera.zoom; cameraOffset.z -= dy * .026 / camera.zoom; camera.position.copy(target).add(cameraOffset); camera.lookAt(target); }
       down.x = e.clientX; down.y = e.clientY;
     }
     function pointerEnd(e) {
