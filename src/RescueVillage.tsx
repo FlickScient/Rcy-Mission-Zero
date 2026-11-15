@@ -1,6 +1,6 @@
 // @ts-nocheck
 import {useEffect,useRef,useState} from "react";
-import {Radio,Shield,Users,Zap} from "lucide-react";
+import {Radio,Shield,Users,Zap,ArrowLeft} from "lucide-react";
 import {findPath} from "./game/pathfinding";
 import ThreeVillage from "./game/ThreeVillage";
 
