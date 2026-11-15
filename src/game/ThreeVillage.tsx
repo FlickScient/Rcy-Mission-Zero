@@ -404,7 +404,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       const walking=mag>.05,speed=(keys.has("shift")||controlsRef.current.sprint)?5.2:3.35;
       if(walking){const dx=mx*speed*dt,dz=mz*speed*dt;if(!collides(player.position.x+dx,player.position.z))player.position.x+=dx;if(!collides(player.position.x,player.position.z+dz))player.position.z+=dz;player.rotation.y=Math.atan2(mx,mz);}
       const gait=walking?Math.sin(t*(speed>4? .018:.013))*.48:0;
-      limbs.forEach((limb,i)=>{limb.rotation.x=walking?gait*(i%2?-1:1):0;});
+      const gaitPhases=[1,-1,-1,1];limbs.forEach((limb,i)=>{limb.rotation.x=walking?gait*gaitPhases[i]:0;});
       player.position.y=.04+(walking?Math.abs(Math.sin(t*.014))*.035:0);
       const followTarget=player.position.clone();followTarget.y=0;target.lerp(followTarget,Math.min(1,dt*4.5));
       camera.position.copy(target).add(cameraOffset);camera.lookAt(target);
