@@ -320,7 +320,9 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     window.addEventListener("keydown",keyDown); window.addEventListener("keyup",keyUp); window.addEventListener("blur",clearKeys);
     const buildingCells=[[2,2],[8,1],[9,5],[3,6],[4,1],[10,2],[1,3],[4,5],[10,6],[0,1]];
     const collides=(x,z)=>{
-      if(x < -13.1 || x > 13.1 || z < -8.6 || z > 6.25)return true;
+      if(x < -31.5 || x > 31.5 || z < -23.5 || z > 23.5)return true;
+      // Flood channel is a hard traversal hazard; only the marked timber crossing is passable.
+      if(z > 6.3 && z < 9.8 && Math.abs(x) < 14.5 && !(x > 5.7 && x < 9.9))return true;
       for(const [c,r] of buildingCells){const p=point(c,r);if(Math.abs(x-p.x)<1.12&&Math.abs(z-p.z)<.98)return true;}
       for(const [tx,tz] of treeSpots)if(Math.hypot(x-tx,z-tz)<.78)return true;
       for(const b of cityBuildings)if(Math.abs(x-b.x)<b.width/2+.55&&Math.abs(z-b.z)<b.depth/2+.55)return true;
