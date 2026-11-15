@@ -119,15 +119,19 @@ function addVolunteer(parent, unit) {
   const g = new THREE.Group(); g.userData.unitId = unit.id; parent.add(g);
   const uniform = mat(unit.color || "#e9e4d7"), dark = mat("#263b32"), skin = mat("#c99470"), helmet = mat(unit.role === "Medical" ? "#f0e9d7" : "#d5b96c");
   const torso = new THREE.Mesh(new THREE.CapsuleGeometry(.22, .38, 4, 7), uniform); torso.position.y = .86; torso.castShadow = true; g.add(torso);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(.17, 12, 10), skin); head.position.y = 1.36; head.castShadow = true; g.add(head);\n  const eyeMat = mat("#27342e", .55);\n  for (const side of [-1, 1]) { const eye = new THREE.Mesh(new THREE.SphereGeometry(.022, 7, 6), eyeMat); eye.position.set(side * .065, 1.39, .145); g.add(eye); }
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.17, 12, 10), skin); head.position.y = 1.36; head.castShadow = true; g.add(head);
+  const eyeMat = mat("#27342e", .55);
+  for (const side of [-1, 1]) { const eye = new THREE.Mesh(new THREE.SphereGeometry(.022, 7, 6), eyeMat); eye.position.set(side * .065, 1.39, .145); g.add(eye); }
   const hat = new THREE.Mesh(new THREE.SphereGeometry(.2, 12, 7, 0, Math.PI * 2, 0, Math.PI / 2), helmet); hat.position.y = 1.48; hat.castShadow = true; g.add(hat);
   const pack = addBox(g, .27, .35, .16, mat(unit.role === "Supply" ? "#a47b45" : "#344f43"), 0, .92, -.25);
   const limbs = [];
   for (const side of [-1, 1]) {
     const leg = new THREE.Group(); leg.position.set(side * .105, .55, 0); g.add(leg);
-    const legMesh = new THREE.Mesh(new THREE.CapsuleGeometry(.075, .28, 3, 6), dark); legMesh.position.y = -.2; legMesh.castShadow = true; leg.add(legMesh);\n    const boot = addBox(leg, .17, .11, .27, mat("#34372f"), 0, -.38, .045); boot.castShadow = true; limbs.push(leg);
+    const legMesh = new THREE.Mesh(new THREE.CapsuleGeometry(.075, .28, 3, 6), dark); legMesh.position.y = -.2; legMesh.castShadow = true; leg.add(legMesh);
+    const boot = addBox(leg, .17, .11, .27, mat("#34372f"), 0, -.38, .045); boot.castShadow = true; limbs.push(leg);
     const arm = new THREE.Group(); arm.position.set(side * .25, 1.02, 0); g.add(arm);
-    const armMesh = new THREE.Mesh(new THREE.CapsuleGeometry(.065, .25, 3, 6), uniform); armMesh.rotation.z = side * -.16; armMesh.position.y = -.18; arm.add(armMesh);\n    const cuff = addBox(arm, .13, .1, .14, helmet, 0, -.31, .01, false); limbs.push(arm);
+    const armMesh = new THREE.Mesh(new THREE.CapsuleGeometry(.065, .25, 3, 6), uniform); armMesh.rotation.z = side * -.16; armMesh.position.y = -.18; arm.add(armMesh);
+    const cuff = addBox(arm, .13, .1, .14, helmet, 0, -.31, .01, false); limbs.push(arm);
   }
   if (unit.role === "Medical") {
     addBox(g, .18, .18, .035, mat("#fff"), .24, .91, .02);
@@ -136,7 +140,8 @@ function addVolunteer(parent, unit) {
   }
   const ring = new THREE.Mesh(new THREE.RingGeometry(.38, .48, 32), mat("#f2d77e", .5, { emissive: "#8b6721", emissiveIntensity: .18 }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = .035; ring.visible = false; g.add(ring);
-  const chestPatch = addBox(g, .16, .2, .025, mat(unit.role === "Medical" ? "#f8eee0" : "#d8c36d"), -.12, .91, .22, false);\n  g.userData.limbs = limbs; g.userData.ring = ring; g.userData.pack = pack;
+  const chestPatch = addBox(g, .16, .2, .025, mat(unit.role === "Medical" ? "#f8eee0" : "#d8c36d"), -.12, .91, .22, false);
+  g.userData.limbs = limbs; g.userData.ring = ring; g.userData.pack = pack;
   return g;
 }
 
