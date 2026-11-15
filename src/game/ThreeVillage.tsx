@@ -168,6 +168,24 @@ function addSurvivor(parent, x, z, index) {
   const arm = new THREE.Mesh(new THREE.CapsuleGeometry(.045, .22, 3, 5), clothes); arm.position.set(.18, .5, 0); arm.rotation.z = -.5; g.add(arm);
   g.userData.phase = index * 1.7; return g;
 }
+function addPedestrian(parent, index) {
+  const g=new THREE.Group();g.userData.pedestrianId=index;parent.add(g);
+  const clothes=["#c56e51","#567c91","#b89b5c","#6d8060","#8c6b83","#d0b7a0"][index%6];
+  const shirt=mat(clothes),skin=mat("#bd8d70"),pants=mat(index%2?"#394b51":"#4c4941");
+  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.14,.27,3,7),shirt);torso.position.y=.52;torso.castShadow=true;g.add(torso);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.115,10,8),skin);head.position.y=.83;head.castShadow=true;g.add(head);
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(.12,10,7,0,Math.PI*2,0,Math.PI/2),mat(index%2?"#342c28":"#514238"));hair.position.y=.88;g.add(hair);
+  const limbs=[];
+  for(const side of [-1,1]){
+    const arm=new THREE.Group();arm.position.set(side*.17,.65,0);g.add(arm);
+    const a=new THREE.Mesh(new THREE.CapsuleGeometry(.04,.19,3,5),shirt);a.position.y=-.12;arm.add(a);limbs.push(arm);
+    const leg=new THREE.Group();leg.position.set(side*.075,.34,0);g.add(leg);
+    const l=new THREE.Mesh(new THREE.CapsuleGeometry(.052,.2,3,5),pants);l.position.y=-.13;leg.add(l);limbs.push(leg);
+  }
+  const alert=new THREE.Mesh(new THREE.SphereGeometry(.075,8,7),mat("#f0a64f",.4,{emissive:"#a94d22",emissiveIntensity:.65}));
+  alert.position.y=1.12;alert.visible=false;g.add(alert);
+  g.userData.limbs=limbs;g.userData.alert=alert;g.userData.state="walking";return g;
+}
 function addVolunteer(parent, unit) {
   const g = new THREE.Group(); g.userData.unitId = unit.id; parent.add(g);
   const uniform = mat(unit.color || "#e9e4d7"), dark = mat("#263b32"), skin = mat("#c99470"), helmet = mat(unit.role === "Medical" ? "#f0e9d7" : "#d5b96c");
@@ -332,6 +350,20 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     };
     const cameraOffset=new THREE.Vector3(18,24,23);
     let lastFrameTime=0;
+    // Independent civilians use a small waypoint network on the central safe streets.
+    const pedestrianRoutes=[
+      [[-9.5,-9],[9.5,-9]], [[9,-8.3],[-9,-8.3]],
+      [[-8.5,-10.2],[8.5,-10.2]], [[8,-7.6],[-8,-7.6]],
+      [[-9.5,-9],[0,-6.8],[9.5,-9]], [[9.5,-9],[0,-11.2],[-9.5,-9]],
+      [[-7.5,-6.9],[7.5,-6.9]], [[7.5,-11],[-7.5,-11]]
+    ];
+    const pedestrians=pedestrianRoutes.map((route,i)=>{
+      const person=addPedestrian(world,i),start=route[0];person.position.set(start[0],.04,start[1]);
+      person.userData.route=route;person.userData.waypoint=1;person.userData.speed=1.05+(i%3)*.12;
+      person.userData.phase=i*1.9;person.userData.homeX=start[0];person.userData.homeZ=start[1];
+      return person;
+    });
+
 
     // Ambient floating pollen and flood spray, intentionally sparse for phones.
     const particles = [];
@@ -406,6 +438,33 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       const gait=walking?Math.sin(t*(speed>4? .018:.013))*.48:0;
       const gaitPhases=[1,-1,-1,1];limbs.forEach((limb,i)=>{limb.rotation.x=walking?gait*gaitPhases[i]:0;});
       player.position.y=.04+(walking?Math.abs(Math.sin(t*.014))*.035:0);
+      // Civilian behaviour: independent patrols, visible panic response and evacuation to the safe north street.
+      for(const person of pedestrians){
+        const evacuating=!!state.floodLevel;
+        person.userData.state=evacuating?"evacuating":"walking";
+        person.userData.alert.visible=evacuating;
+        let destination;
+        if(evacuating){
+          const safeZ=-12.4,dx=person.position.x-person.userData.homeX;
+          destination=new THREE.Vector3(THREE.MathUtils.clamp(person.userData.homeX,-8.5,8.5),.04,safeZ+(person.userData.pedestrianId%3)*.42);
+        }else{
+          const route=person.userData.route,wp=route[person.userData.waypoint%route.length];
+          destination=new THREE.Vector3(wp[0],.04,wp[1]);
+        }
+        const dx=destination.x-person.position.x,dz=destination.z-person.position.z,dist=Math.hypot(dx,dz);
+        if(dist<.22){
+          if(evacuating){person.userData.state="sheltered";person.userData.alert.visible=false;}
+          else person.userData.waypoint=(person.userData.waypoint+1)%person.userData.route.length;
+        }else{
+          const speed=evacuating?2.45:person.userData.speed,step=Math.min(dist,speed*dt);
+          person.position.x+=dx/dist*step;person.position.z+=dz/dist*step;
+          person.rotation.y=Math.atan2(dx,dz);
+          const gait=Math.sin(t*(evacuating?.022:.014)+person.userData.phase)*.42;
+          person.userData.limbs.forEach((limb,i)=>{limb.rotation.x=gait*(i%2?-1:1);});
+          person.position.y=.04+Math.abs(Math.sin(t*.014+person.userData.phase))*.025;
+        }
+        person.userData.alert.position.y=1.12+Math.sin(t*.008+person.userData.phase)*.07;
+      }
       const followTarget=player.position.clone();followTarget.y=0;target.lerp(followTarget,Math.min(1,dt*4.5));
       camera.position.copy(target).add(cameraOffset);camera.lookAt(target);
       river.position.y = state.floodLevel ? .2 : .11; river.scale.z = state.floodLevel ? 1.22 : 1;
