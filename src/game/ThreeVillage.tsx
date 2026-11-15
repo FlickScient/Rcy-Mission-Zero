@@ -281,6 +281,22 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       const state = liveRef.current.game;
       river.position.y = state.floodLevel ? .2 : .11; river.scale.z = state.floodLevel ? 1.22 : 1;
       river.material.color.set(state.floodLevel ? "#286f91" : "#347f9b");
+      sun.intensity = state.floodLevel ? 2.05 : 3.1;
+      rain.forEach((drop, i) => {
+        drop.visible = state.floodLevel;
+        if (state.floodLevel) {
+          drop.position.y -= drop.userData.speed;
+          drop.position.x -= .012;
+          if (drop.position.y < .2) {
+            drop.position.y = 10 + (i % 6);
+            drop.position.x = -16 + (i * 2.37) % 32;
+          }
+        }
+      });
+      trees.forEach((tree, i) => {
+        tree.rotation.z = Math.sin(t * .0007 + i * 1.9) * .018;
+        tree.rotation.x = Math.cos(t * .00055 + i) * .012;
+      });
       for (const [id, node] of unitNodes) {
         const unit = state.units.find(u => u.id === id); if (!unit) continue;
         let x = point(unit.col, unit.row).x, z = point(unit.col, unit.row).z, moving = !!(unit.path && unit.path.length);
