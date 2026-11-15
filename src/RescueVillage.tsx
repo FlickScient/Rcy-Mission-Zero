@@ -28,6 +28,7 @@ export default function RescueVillage({onBack,user,api,onProgress}){
   const id = setInterval(() => {
     setSeconds(current => Math.max(0, current - 1));
     const finished = [];
+    const treating = [];
     const extraction = { col: 5, row: 4 };
     const nextUnits = unitsState.map(unit => {
       if (!unit.task) return unit;
@@ -44,6 +45,8 @@ export default function RescueVillage({onBack,user,api,onProgress}){
       const nextCell = unit.path[0], rest = unit.path.slice(1);
       if (rest.length > 0) return { ...unit, col: nextCell.col, row: nextCell.row, path: rest, stepProgress: 0 };
       if (unit.phase === "to_site") {
+        const site = sites.find(item => item.id === unit.task);
+        treating.push({ unit: unit.name, site });
         return { ...unit, col: nextCell.col, row: nextCell.row, path: [], phase: "treating", phaseTicks: unit.role === "Medical" ? 3 : 4, stepProgress: 0 };
       }
       const site = sites.find(item => item.id === unit.task);
@@ -51,6 +54,7 @@ export default function RescueVillage({onBack,user,api,onProgress}){
       return { ...unit, col: nextCell.col, row: nextCell.row, task: null, path: null, phase: null, carrying: false, stepProgress: 0, phaseTicks: 0 };
     });
     setUnitsState(nextUnits);
+    if (treating.length && !finished.length) setMessage(treating.map(item => item.unit + " reached " + item.site.name + " and is stabilizing survivors. Extraction will begin when treatment is complete.").join(" "));
     if (finished.length) {
       setSaved(old => finished.reduce((next, item) => ({
         ...next,
