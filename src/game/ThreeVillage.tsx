@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { COLS, ROWS, obstacles } from "./grid";
 
@@ -217,7 +217,7 @@ function addVolunteer(parent, unit) {
 }
 
 export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }) {
-  const hostRef = useRef(null), liveRef = useRef({ game, onUnitSelect, onSiteSelect }), sceneRef = useRef(null); const controlsRef = useRef({ x: 0, z: 0, sprint: false });
+  const hostRef = useRef(null), liveRef = useRef({ game, onUnitSelect, onSiteSelect }), sceneRef = useRef(null); const controlsRef = useRef({ x: 0, z: 0, sprint: false }); const actionRef = useRef(() => {}); const [interactionMessage,setInteractionMessage] = useState("Find a civilian and get close to offer help.");
   liveRef.current = { game, onUnitSelect, onSiteSelect };
   useEffect(() => {
     const host = hostRef.current; if (!host) return;
@@ -332,7 +332,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       const legMesh = new THREE.Mesh(new THREE.CapsuleGeometry(.08,.27,4,7),mat("#26333b")); legMesh.position.y=-.17; leg.add(legMesh); limbs.push(leg);
     }
     const keys = new Set();
-    const keyDown = e => { const k=e.key.toLowerCase(); if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","shift"].includes(k)){keys.add(k); if(k.startsWith("arrow"))e.preventDefault();} };
+    const keyDown = e => { const k=e.key.toLowerCase(); if(k==="e"){actionRef.current();return;} if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","shift"].includes(k)){keys.add(k); if(k.startsWith("arrow"))e.preventDefault();} };
     const keyUp = e => keys.delete(e.key.toLowerCase());
     const clearKeys = () => { keys.clear(); controlsRef.current={x:0,z:0,sprint:false}; };
     window.addEventListener("keydown",keyDown); window.addEventListener("keyup",keyUp); window.addEventListener("blur",clearKeys);
@@ -363,6 +363,19 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       person.userData.phase=i*1.9;person.userData.homeX=start[0];person.userData.homeZ=start[1];
       return person;
     });
+    actionRef.current=()=>{
+      let nearest=null,nearestDistance=2.7;
+      for(const person of pedestrians){
+        if(person.userData.state==="assisted")continue;
+        const distance=Math.hypot(person.position.x-player.position.x,person.position.z-player.position.z);
+        if(distance<nearestDistance){nearest=person;nearestDistance=distance;}
+      }
+      if(!nearest){setInteractionMessage("No civilian close enough. Move nearer and press E / HELP.");return;}
+      nearest.userData.state="assisted";nearest.userData.alert.visible=false;
+      nearest.userData.assistedAt=performance.now();
+      nearest.traverse(child=>{if(child.material?.color&&child.material.color.set)child.material.color.set("#79a879");});
+      setInteractionMessage("Civilian assisted. They are safe for this scenario.");
+    };
 
 
     // Ambient floating pollen and flood spray, intentionally sparse for phones.
@@ -441,7 +454,8 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       // Civilian behaviour: independent patrols, visible panic response and evacuation to the safe north street.
       for(const person of pedestrians){
         const evacuating=!!state.floodLevel;
-        person.userData.state=evacuating?"evacuating":"walking";
+        if(person.userData.state==="assisted"){person.userData.alert.visible=false;continue;}
+        if(person.userData.state!=="sheltered")person.userData.state=evacuating?"evacuating":"walking";
         person.userData.alert.visible=evacuating;
         let destination;
         if(evacuating){
@@ -561,6 +575,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       <div><button aria-label="Move left" onPointerDown={e=>hold(e,-1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>◀</button><button aria-label="Move backward" onPointerDown={e=>hold(e,0,1)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▼</button><button aria-label="Move right" onPointerDown={e=>hold(e,1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▶</button></div>
     </div>
     <button className="player-sprint" onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);controlsRef.current.sprint=true;}} onPointerUp={()=>{controlsRef.current.sprint=false;}} onPointerCancel={()=>{controlsRef.current.sprint=false;}}>SPRINT</button>
+    <div className="civilian-interaction" onPointerDown={e=>e.stopPropagation()}><span>{interactionMessage}</span><button onClick={()=>actionRef.current()}>HELP NEARBY · E</button></div>
     <div className="player-control-hint">WASD / ARROWS · MOVE · SHIFT / SPRINT</div>
   </div>;
 }
