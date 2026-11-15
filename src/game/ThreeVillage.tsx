@@ -511,7 +511,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       }
       if(civilianStatusRef.current && frame % 20 === 0){
         const counts=pedestrians.reduce((acc,person)=>{const status=person.userData.state||"walking";acc[status]=(acc[status]||0)+1;return acc;},{});
-        civilianStatusRef.current.textContent="CIVILIANS  ·  "+(counts.walking||0)+" walking  ·  "+(counts.following||0)+" following  ·  "+(counts.evacuating||0)+" evacuating  ·  "+(counts.sheltered||0)+" safe";
+        civilianStatusRef.current.textContent="CIVILIANS  ·  "+(counts.walking||0)+" walking  ·  "+(counts.injured||0)+" injured  ·  "+(counts.following||0)+" following  ·  "+(counts.evacuating||0)+" evacuating  ·  "+(counts.sheltered||0)+" safe";
       }
       const followTarget=player.position.clone();followTarget.y=0;target.lerp(followTarget,Math.min(1,dt*4.5));
       camera.position.copy(target).add(cameraOffset);camera.lookAt(target);
