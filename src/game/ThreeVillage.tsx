@@ -212,7 +212,18 @@ function addVolunteer(parent, unit) {
   const ring = new THREE.Mesh(new THREE.RingGeometry(.38, .48, 32), mat("#f2d77e", .5, { emissive: "#8b6721", emissiveIntensity: .18 }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = .035; ring.visible = false; g.add(ring);
   const chestPatch = addBox(g, .16, .2, .025, mat(unit.role === "Medical" ? "#f8eee0" : "#d8c36d"), -.12, .91, .22, false);
-  g.userData.limbs = limbs; g.userData.ring = ring; g.userData.pack = pack;
+  // A visible passenger model appears once a team has stabilized and lifted a survivor.
+  const carried = new THREE.Group(); carried.position.set(0, .72, -.34); carried.visible = false; g.add(carried);
+  const passengerBody = new THREE.Mesh(new THREE.CapsuleGeometry(.105, .25, 3, 6), mat("#d8b78c")); passengerBody.rotation.z = Math.PI / 2; passengerBody.castShadow = true; carried.add(passengerBody);
+  const passengerHead = new THREE.Mesh(new THREE.SphereGeometry(.105, 9, 8), skin); passengerHead.position.set(.25, .025, 0); passengerHead.castShadow = true; carried.add(passengerHead);
+  const passengerBlanket = addBox(carried, .38, .055, .2, mat("#b85e50"), -.04, .015, 0, false);
+  // Treatment ring and floating medical cross are only shown while the team is working.
+  const workRing = new THREE.Mesh(new THREE.TorusGeometry(.58, .045, 7, 28), mat("#7ed5c0", .4, { emissive: "#287d70", emissiveIntensity: .5 }));
+  workRing.rotation.x = Math.PI / 2; workRing.position.y = .045; workRing.visible = false; g.add(workRing);
+  const workCross = new THREE.Group(); workCross.position.set(0, 2.05, 0); workCross.visible = false; g.add(workCross);
+  addBox(workCross, .12, .42, .08, mat("#f2eee0", .4, { emissive: "#b8e4d1", emissiveIntensity: .35 }), 0, 0, 0, false);
+  addBox(workCross, .42, .12, .08, mat("#f2eee0", .4, { emissive: "#b8e4d1", emissiveIntensity: .35 }), 0, 0, 0, false);
+  g.userData.limbs = limbs; g.userData.ring = ring; g.userData.pack = pack; g.userData.carried = carried; g.userData.workRing = workRing; g.userData.workCross = workCross;
   return g;
 }
 
@@ -313,6 +324,17 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       }
       siteNodes.set(site.id, { ring, cap, civilians });
     }
+    // Safe extraction base: teams must return here with a survivor before the rescue is counted.
+    const extractionCell = { col: 5, row: 7 }, extractionPoint = point(extractionCell.col, extractionCell.row);
+    const extractionBase = new THREE.Group(); extractionBase.position.set(extractionPoint.x, .04, extractionPoint.z); world.add(extractionBase);
+    const extractionRing = new THREE.Mesh(new THREE.TorusGeometry(.9, .075, 8, 36), mat("#8fe0a0", .35, { emissive: "#3d9b5d", emissiveIntensity: .7 }));
+    extractionRing.rotation.x = Math.PI / 2; extractionBase.add(extractionRing);
+    const extractionPole = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, 2.1, 8), mat("#e4e9d6", .45)); extractionPole.position.y = 1.05; extractionBase.add(extractionPole);
+    const extractionFlag = new THREE.Mesh(new THREE.BoxGeometry(.72, .38, .045), mat("#63b77c", .45, { emissive: "#286c42", emissiveIntensity: .25 }));
+    extractionFlag.position.set(.34, 1.78, 0); extractionBase.add(extractionFlag);
+    const extractionCross = new THREE.Group(); extractionCross.position.set(0, 2.2, 0); extractionBase.add(extractionCross);
+    addBox(extractionCross, .12, .48, .08, mat("#f7f3df"), 0, 0, 0, false);
+    addBox(extractionCross, .42, .12, .08, mat("#f7f3df"), 0, 0, 0, false);
     const unitNodes = new Map();
     for (const unit of liveRef.current.game.units) {
       const g = addVolunteer(world, unit); unitNodes.set(unit.id, g);
@@ -533,6 +555,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
         tree.rotation.z = Math.sin(t * .0007 + i * 1.9) * .018;
         tree.rotation.x = Math.cos(t * .00055 + i) * .012;
       });
+      extractionRing.rotation.z = t * .00055; extractionRing.scale.setScalar(1 + Math.sin(t * .004) * .07); extractionFlag.rotation.y = Math.sin(t * .0014) * .12;
       for (const [id, node] of unitNodes) {
         const unit = state.units.find(u => u.id === id); if (!unit) continue;
         let x = point(unit.col, unit.row).x, z = point(unit.col, unit.row).z, moving = !!(unit.path && unit.path.length);
@@ -545,6 +568,10 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
         const phase = t * (moving ? .014 : .002) + (id.length * 1.7);
         node.userData.limbs.forEach((limb, i) => { limb.rotation.x = moving ? Math.sin(phase + (i % 2) * Math.PI) * .55 : Math.sin(phase + i) * .035; });
         node.userData.ring.visible = state.selected === id;
+        node.userData.carried.visible = !!unit.carrying;
+        node.userData.workRing.visible = unit.phase === "treating";
+        node.userData.workCross.visible = unit.phase === "treating";
+        if (unit.phase === "treating") { node.userData.workRing.rotation.z = t * .002; node.userData.workCross.position.y = 2.05 + Math.sin(t * .006) * .09; }
         node.userData.ring.scale.setScalar(state.selected === id ? 1 + Math.sin(t * .006) * .06 : 1);
       }
       for (const site of sites) {
