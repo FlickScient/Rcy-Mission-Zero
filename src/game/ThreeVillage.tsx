@@ -189,7 +189,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     for (const side of [-1, 1]) addBox(bridge, 3.7, .12, .12, mat("#614a35"), 0, .62, side * .72);
     // Densely planted tree belts, palms, shrubs and scattered village greenery.
     const treeSpots = [[-13,-7],[-10,-6],[-7,-7],[-3,-7],[1,-7],[5,-7],[9,-7],[13,-6],[-14,-2],[-13,2],[-12,6],[-10,7],[-7,6],[-4,7],[-1,7],[2,7],[5,7],[10,7],[13,5],[13,1],[12,-3],[-9,1],[-6,3],[10,1],[4,3],[-2,4]];
-    treeSpots.forEach(([x,z], i) => addTree(world, x, z, .76 + (i % 4) * .11, i));
+    const trees = treeSpots.map(([x,z], i) => addTree(world, x, z, .76 + (i % 4) * .11, i));
     // Distinctive public buildings and homes across the sector.
     const buildingKinds = new Map([[2 + "," + 2,"home"],[8 + "," + 1,"school"],[9 + "," + 5,"clinic"],[3 + "," + 6,"home"],[4 + "," + 1,"home"],[10 + "," + 2,"home"],[1 + "," + 3,"home"],[4 + "," + 5,"home"],[10 + "," + 6,"home"],[0 + "," + 1,"home"]]);
     for (const [key, kind] of buildingKinds) { const [c,r] = key.split(",").map(Number); addHouse(world, c, r, kind); }
@@ -219,7 +219,14 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     const particles = [];
     for (let i = 0; i < 28; i++) {
       const dust = new THREE.Mesh(new THREE.SphereGeometry(.025 + (i % 3) * .012, 5, 5), mat("#f1e6bd", .5, { transparent: true, opacity: .48 }));
-      dust.position.set(-14 + (i * 1.91) % 28, 1.2 + (i % 5) * .5, -8 + (i * 2.7) % 16); world.add(dust); particles.push(dust);
+      dust.position.set(-14 + (i * 1.91) % 28, 1.2 + (i % 5) * .5, -8 + (i * 2.7) % 16); dust.userData.baseX = dust.position.x; world.add(dust); particles.push(dust);
+    }
+    const rain = [];
+    for (let i = 0; i < 44; i++) {
+      const streak = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .34, 4), mat("#d5e8e7", .3, { transparent: true, opacity: .3 }));
+      streak.position.set(-16 + (i * 2.37) % 32, 5 + (i % 9) * .8, -10 + (i * 1.73) % 20);
+      streak.rotation.z = -.18; streak.visible = false; streak.userData.speed = .055 + (i % 5) * .012;
+      world.add(streak); rain.push(streak);
     }
     const routeLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: "#fff0b8", transparent: true, opacity: .92 }));
     world.add(routeLine); let routeSignature = "";
