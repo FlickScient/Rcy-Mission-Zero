@@ -217,7 +217,7 @@ function addVolunteer(parent, unit) {
 }
 
 export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }) {
-  const hostRef = useRef(null), liveRef = useRef({ game, onUnitSelect, onSiteSelect }), sceneRef = useRef(null); const controlsRef = useRef({ x: 0, z: 0, sprint: false }); const actionRef = useRef(() => {}); const [interactionMessage,setInteractionMessage] = useState("Find a civilian and get close to offer help.");
+  const hostRef = useRef(null), liveRef = useRef({ game, onUnitSelect, onSiteSelect }), sceneRef = useRef(null), civilianStatusRef = useRef(null); const controlsRef = useRef({ x: 0, z: 0, sprint: false }); const actionRef = useRef(() => {}); const [interactionMessage,setInteractionMessage] = useState("Find a civilian and get close to offer help.");
   liveRef.current = { game, onUnitSelect, onSiteSelect };
   useEffect(() => {
     const host = hostRef.current; if (!host) return;
@@ -372,13 +372,16 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     actionRef.current=()=>{
       const playerAtSafe=Math.hypot(player.position.x-evacuationPoint.x,player.position.z-evacuationPoint.z)<3.1;
       if(playerAtSafe){
-        let escorted=0;
+        let checkedIn=0,stillFollowing=0;
         for(const person of pedestrians)if(person.userData.state==="following"){
-          person.userData.state="sheltered";person.userData.alert.visible=false;person.userData.safeAt=performance.now();
-          person.traverse(child=>{if(child.material?.color&&child.material.color.set)child.material.color.set("#79a879");});
-          escorted++;
+          const distance=Math.hypot(person.position.x-evacuationPoint.x,person.position.z-evacuationPoint.z);
+          if(distance<=1.9){
+            person.userData.state="sheltered";person.userData.alert.visible=false;person.userData.safeAt=performance.now();
+            person.traverse(child=>{if(child.material?.color&&child.material.color.set)child.material.color.set("#79a879");});
+            checkedIn++;
+          }else stillFollowing++;
         }
-        setInteractionMessage(escorted?escorted+" civilian(s) checked in at the safe evacuation zone.":"Safe zone reached. No civilians are following you.");
+        setInteractionMessage(checkedIn?checkedIn+" civilian(s) safely checked in."+ (stillFollowing?" "+stillFollowing+" still catching up — wait at the beacon.":"") : stillFollowing?"Your civilian(s) are still catching up. Stay at the green beacon and press HELP again.":"Safe zone reached. No civilians are following you.");
         return;
       }
       let nearest=null,nearestDistance=2.8;
@@ -487,7 +490,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
         }
         person.userData.alert.visible=evacuating||person.userData.state==="following";
         let destination;
-        if(evacuating)destination=new THREE.Vector3(THREE.MathUtils.clamp(person.userData.homeX,-8.5,8.5),.04,evacuationPoint.z+(person.userData.pedestrianId%3-1)*.42);
+        if(evacuating)destination=new THREE.Vector3((person.userData.pedestrianId%5-2)*.32,.04,evacuationPoint.z+(person.userData.pedestrianId%3-1)*.24);
         else {const route=person.userData.route,wp=route[person.userData.waypoint%route.length];destination=new THREE.Vector3(wp[0],.04,wp[1]);}
         const dx=destination.x-person.position.x,dz=destination.z-person.position.z,dist=Math.hypot(dx,dz);
         if(dist<.22){
@@ -501,6 +504,10 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
           person.position.y=.04+Math.abs(Math.sin(t*.014+person.userData.phase))*.025;
         }
         person.userData.alert.position.y=1.12+Math.sin(t*.008+person.userData.phase)*.07;
+      }
+      if(civilianStatusRef.current && frame % 20 === 0){
+        const counts=pedestrians.reduce((acc,person)=>{const status=person.userData.state||"walking";acc[status]=(acc[status]||0)+1;return acc;},{});
+        civilianStatusRef.current.textContent="CIVILIANS  ·  "+(counts.walking||0)+" walking  ·  "+(counts.following||0)+" following  ·  "+(counts.evacuating||0)+" evacuating  ·  "+(counts.sheltered||0)+" safe";
       }
       const followTarget=player.position.clone();followTarget.y=0;target.lerp(followTarget,Math.min(1,dt*4.5));
       camera.position.copy(target).add(cameraOffset);camera.lookAt(target);
@@ -598,6 +605,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       <div><button aria-label="Move left" onPointerDown={e=>hold(e,-1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>◀</button><button aria-label="Move backward" onPointerDown={e=>hold(e,0,1)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▼</button><button aria-label="Move right" onPointerDown={e=>hold(e,1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▶</button></div>
     </div>
     <button className="player-sprint" onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);controlsRef.current.sprint=true;}} onPointerUp={()=>{controlsRef.current.sprint=false;}} onPointerCancel={()=>{controlsRef.current.sprint=false;}}>SPRINT</button>
+    <div className="civilian-status" ref={civilianStatusRef}>CIVILIANS  ·  8 in area</div>
     <div className="civilian-interaction" onPointerDown={e=>e.stopPropagation()}><span>{interactionMessage}</span><button onClick={()=>actionRef.current()}>HELP NEARBY · E</button></div>
     <div className="player-control-hint">WASD / ARROWS · MOVE · SHIFT / SPRINT</div>
   </div>;
