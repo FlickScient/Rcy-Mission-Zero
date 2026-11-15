@@ -110,3 +110,7 @@
 .civilian-interaction button{flex:none;padding:8px 10px;border:1px solid #d8bb74;border-radius:8px;background:#6b5030;color:#fff4d8;font:700 9px 'DM Mono',monospace;letter-spacing:.04em;cursor:pointer}
 .civilian-interaction button:active{transform:scale(.96);background:#8b6a3b}
 @media(max-width:700px){.civilian-interaction{top:8px;max-width:calc(100% - 150px);gap:5px;padding:6px 7px 6px 9px;border-radius:9px}.civilian-interaction span{font-size:7px;max-width:145px}.civilian-interaction button{padding:7px 8px;font-size:7px;white-space:nowrap}}
+
+/* Live civilian state counts */
+.civilian-status{position:absolute;z-index:5;top:57px;right:12px;max-width:calc(100% - 24px);padding:7px 10px;border:1px solid #b8d6ad66;border-radius:9px;background:#17271fdc;color:#e3efdc;font:600 8px 'DM Mono',monospace;letter-spacing:.035em;backdrop-filter:blur(8px);pointer-events:none}
+@media(max-width:700px){.civilian-status{top:49px;right:8px;max-width:calc(100% - 16px);font-size:6.5px;padding:6px 8px}}
