@@ -114,3 +114,78 @@
 /* Live civilian state counts */
 .civilian-status{position:absolute;z-index:5;top:57px;right:12px;max-width:calc(100% - 24px);padding:7px 10px;border:1px solid #b8d6ad66;border-radius:9px;background:#17271fdc;color:#e3efdc;font:600 8px 'DM Mono',monospace;letter-spacing:.035em;backdrop-filter:blur(8px);pointer-events:none}
 @media(max-width:700px){.civilian-status{top:49px;right:8px;max-width:calc(100% - 16px);font-size:6.5px;padding:6px 8px}}
+
+
+/* Mission Zero standalone field mode: edge-to-edge landscape game */
+.rescue-shell{
+ position:fixed!important;inset:0!important;z-index:100!important;width:100vw!important;height:100vh!important;height:100dvh!important;
+ max-width:none!important;margin:0!important;padding:0!important;overflow:hidden!important;background:#0b120e!important;color:#f5f5ee;
+}
+.rescue-map-wrap{position:absolute!important;inset:0!important;z-index:0!important;width:100%!important;height:100%!important;min-height:0!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;background:#547b54!important}
+.rescue-map-wrap .three-village-host{position:absolute;inset:0;width:100%;height:100%}
+.rescue-map-wrap .three-village-canvas{width:100%!important;height:100%!important;aspect-ratio:auto!important}
+.rescue-heading{position:absolute!important;z-index:12!important;top:9px;left:12px;width:min(330px,38vw);margin:0!important;padding:9px 12px!important;
+ border:1px solid #ffffff30;border-radius:12px;background:linear-gradient(110deg,#102019ed,#102019a8);backdrop-filter:blur(12px);pointer-events:auto}
+.rescue-heading .section-kicker{font-size:7px!important;letter-spacing:.14em}
+.rescue-heading h1{font-size:clamp(17px,2.2vw,25px)!important;margin:4px 0 0!important;letter-spacing:-.04em}
+.rescue-heading p{display:none}
+.rescue-flood-warning{position:absolute;top:100%;left:0;margin-top:5px;font-size:7px;padding:6px 8px;white-space:nowrap}
+.game-header-actions{display:flex;gap:6px;position:absolute;top:8px;right:8px}
+.rescue-pause,.game-exit{min-height:31px!important;margin:0!important;padding:0 9px!important;border-radius:8px!important;font-size:8px!important;white-space:nowrap}
+.game-exit{display:inline-flex;align-items:center;gap:5px;border:1px solid #ffffff45;background:#37211f;color:#ffe9df;font:700 8px 'DM Mono',monospace;letter-spacing:.07em}
+.rescue-hud{position:absolute!important;z-index:11!important;top:73px;left:12px;width:min(330px,38vw);margin:0!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:1px!important;border-radius:11px!important;overflow:hidden}
+.rescue-hud>div{padding:8px 11px!important}
+.rescue-hud span{font-size:6px!important}
+.rescue-hud b{font-size:15px!important;margin-top:3px!important}
+.rescue-site-actions{position:absolute!important;z-index:12!important;left:112px;bottom:12px;width:min(61vw,760px);margin:0!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
+.rescue-site-button{min-height:47px!important;padding:7px 9px!important;border-radius:9px!important}
+.rescue-site-button b{font-size:9px!important}
+.rescue-site-button span{font-size:7px!important}
+.rescue-control-grid{position:absolute!important;z-index:12!important;right:10px;top:104px;bottom:10px;width:min(270px,27vw);display:flex!important;flex-direction:column!important;gap:8px!important;margin:0!important;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.rescue-panel{padding:11px!important;border-radius:11px!important}
+.rescue-panel-head{padding-bottom:8px!important;font-size:8px!important}
+.rescue-unit{padding:7px 5px!important;gap:7px!important}
+.unit-avatar{width:26px!important;height:26px!important}
+.rescue-unit b{font-size:9px!important}
+.rescue-unit small,.unit-state{font-size:7px!important}
+.rescue-message{font-size:9px!important;min-height:0!important;margin:8px 0}
+.rescue-objective{padding:8px!important;margin:7px 0!important}
+.rescue-objective b{font-size:7px!important}
+.rescue-objective span{font-size:8px!important;line-height:1.45!important}
+.rescue-progress{margin:7px 0 4px!important}
+.rescue-panel>small{font-size:7px!important}
+.map-legend{top:12px!important;bottom:auto!important;left:auto!important;right:12px!important;z-index:8!important;font-size:7px!important}
+.rescue-map-tools{top:54px!important;right:12px!important;z-index:8!important}
+.player-control-pad{left:12px!important;bottom:12px!important;z-index:13!important;transform:scale(.86);transform-origin:bottom left}
+.player-sprint{right:min(292px,29vw)!important;bottom:15px!important;z-index:13!important;width:63px!important;height:39px!important}
+.player-control-hint{display:none!important}
+.civilian-interaction{top:12px!important;left:50%!important;max-width:min(42vw,500px)!important;z-index:14!important}
+.civilian-status{top:54px!important;right:12px!important;z-index:9!important;max-width:260px!important;font-size:7px!important}
+.rescue-result{position:absolute!important;z-index:30!important;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,86vw);max-height:85vh;overflow:auto;padding:22px!important}
+.rescue-disclaimer{display:none!important}
+.rescue-paused-overlay{z-index:25!important}
+.game-rotate-overlay{display:none}
+.game-rotate-overlay .rotate-phone{font-size:62px;line-height:1;transform:rotate(90deg);color:#d6bd79;margin-bottom:12px}
+.game-rotate-overlay .game-kicker,.game-rotate-overlay .rotate-hint{font:700 9px 'DM Mono',monospace;letter-spacing:.16em;color:#d8c38b}
+.game-rotate-overlay h2{font:700 30px 'Space Grotesk',sans-serif;margin:12px 0 5px;color:#f6f2e7}
+.game-rotate-overlay p{max-width:300px;text-align:center;color:#b8c5b7;font:12px/1.7 Manrope,sans-serif;margin:0}
+@media(orientation:portrait){
+ .rescue-shell .game-rotate-overlay{position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px;background:radial-gradient(ellipse at 50% 35%,#294632,#0b120e 72%);visibility:visible!important}
+ .rescue-shell>*:not(.game-rotate-overlay){visibility:hidden!important}
+}
+@media(orientation:landscape) and (max-height:520px){
+ .rescue-heading{top:5px;left:7px;padding:6px 9px!important;width:270px}
+ .rescue-heading h1{font-size:16px!important}
+ .rescue-hud{top:58px;left:7px;width:270px}
+ .rescue-control-grid{top:88px;right:7px;bottom:7px;width:235px}
+ .rescue-site-actions{left:99px;bottom:7px;width:calc(100vw - 360px);gap:4px!important}
+ .rescue-site-button{min-height:40px!important;padding:5px 6px!important}
+ .rescue-site-button b{font-size:8px!important}
+ .player-control-pad{left:7px!important;bottom:6px!important;transform:scale(.72)}
+ .player-sprint{right:250px!important;bottom:8px!important}
+ .civilian-interaction{top:7px!important;max-width:36vw!important;padding:5px 7px!important}
+ .civilian-status{top:42px!important;right:7px!important}
+ .map-legend{top:7px!important;right:7px!important}
+ .rescue-map-tools{top:42px!important;right:7px!important}
+}
