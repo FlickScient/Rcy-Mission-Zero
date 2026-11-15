@@ -146,7 +146,7 @@ function addVolunteer(parent, unit) {
 }
 
 export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }) {
-  const hostRef = useRef(null), liveRef = useRef({ game, onUnitSelect, onSiteSelect }), sceneRef = useRef(null);
+  const hostRef = useRef(null), liveRef = useRef({ game, onUnitSelect, onSiteSelect }), sceneRef = useRef(null); const controlsRef = useRef({ x: 0, z: 0, sprint: false });
   liveRef.current = { game, onUnitSelect, onSiteSelect };
   useEffect(() => {
     const host = hostRef.current; if (!host) return;
@@ -220,6 +220,36 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     for (const unit of liveRef.current.game.units) {
       const g = addVolunteer(world, unit); unitNodes.set(unit.id, g);
     }
+    // Controllable player character for free exploration.
+    const player = new THREE.Group(); player.position.set(0, .04, -.5); world.add(player);
+    const bodyMat = mat("#315d91"), trimMat = mat("#e7c66e"), skinMat = mat("#bd8d6d");
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(.22, .42, 5, 9), bodyMat); body.position.y = .78; body.castShadow = true; player.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(.17, 14, 12), skinMat); head.position.y = 1.27; head.castShadow = true; player.add(head);
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(.19, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), trimMat); helmet.position.y = 1.38; player.add(helmet);
+    addBox(player, .3, .34, .18, mat("#263f35"), 0, .78, -.25);
+    const limbs = [];
+    for (const side of [-1,1]) {
+      const arm = new THREE.Group(); arm.position.set(side*.25,.95,0); player.add(arm);
+      const armMesh = new THREE.Mesh(new THREE.CapsuleGeometry(.065,.27,4,7),bodyMat); armMesh.position.y=-.18; arm.add(armMesh); limbs.push(arm);
+      const leg = new THREE.Group(); leg.position.set(side*.11,.43,0); player.add(leg);
+      const legMesh = new THREE.Mesh(new THREE.CapsuleGeometry(.08,.27,4,7),mat("#26333b")); legMesh.position.y=-.17; leg.add(legMesh); limbs.push(leg);
+    }
+    const keys = new Set();
+    const keyDown = e => { const k=e.key.toLowerCase(); if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","shift"].includes(k)){keys.add(k); if(k.startsWith("arrow"))e.preventDefault();} };
+    const keyUp = e => keys.delete(e.key.toLowerCase());
+    const clearKeys = () => { keys.clear(); controlsRef.current={x:0,z:0,sprint:false}; };
+    window.addEventListener("keydown",keyDown); window.addEventListener("keyup",keyUp); window.addEventListener("blur",clearKeys);
+    const buildingCells=[[2,2],[8,1],[9,5],[3,6],[4,1],[10,2],[1,3],[4,5],[10,6],[0,1]];
+    const collides=(x,z)=>{
+      if(x < -13.1 || x > 13.1 || z < -8.6 || z > 6.25)return true;
+      for(const [c,r] of buildingCells){const p=point(c,r);if(Math.abs(x-p.x)<1.12&&Math.abs(z-p.z)<.98)return true;}
+      for(const [tx,tz] of treeSpots)if(Math.hypot(x-tx,z-tz)<.78)return true;
+      for(const o of obstacles)if(o.kind==="rubble"||o.kind==="water"){const p=point(o.col,o.row);if(Math.abs(x-p.x)<.78&&Math.abs(z-p.z)<.78)return true;}
+      return false;
+    };
+    const cameraOffset=new THREE.Vector3(18,24,23);
+    let lastFrameTime=0;
+
     // Ambient floating pollen and flood spray, intentionally sparse for phones.
     const particles = [];
     for (let i = 0; i < 28; i++) {
@@ -284,6 +314,17 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       if (disposed) return;
       frame = requestAnimationFrame(animate);
       const state = liveRef.current.game;
+      const dt=lastFrameTime?Math.min((t-lastFrameTime)/1000,.05):0; lastFrameTime=t;
+      let mx=(keys.has("d")||keys.has("arrowright")?1:0)-(keys.has("a")||keys.has("arrowleft")?1:0)+controlsRef.current.x;
+      let mz=(keys.has("s")||keys.has("arrowdown")?1:0)-(keys.has("w")||keys.has("arrowup")?1:0)+controlsRef.current.z;
+      const mag=Math.hypot(mx,mz);if(mag>1){mx/=mag;mz/=mag;}
+      const walking=mag>.05,speed=(keys.has("shift")||controlsRef.current.sprint)?5.2:3.35;
+      if(walking){const dx=mx*speed*dt,dz=mz*speed*dt;if(!collides(player.position.x+dx,player.position.z))player.position.x+=dx;if(!collides(player.position.x,player.position.z+dz))player.position.z+=dz;player.rotation.y=Math.atan2(mx,mz);}
+      const gait=walking?Math.sin(t*(speed>4? .018:.013))*.48:0;
+      limbs.forEach((limb,i)=>{limb.rotation.x=walking?gait*(i%2?-1:1):0;});
+      player.position.y=.04+(walking?Math.abs(Math.sin(t*.014))*.035:0);
+      const followTarget=player.position.clone();followTarget.y=0;target.lerp(followTarget,Math.min(1,dt*4.5));
+      camera.position.copy(target).add(cameraOffset);camera.lookAt(target);
       river.position.y = state.floodLevel ? .2 : .11; river.scale.z = state.floodLevel ? 1.22 : 1;
       river.material.color.set(state.floodLevel ? "#286f91" : "#347f9b");
       sun.intensity = state.floodLevel ? 2.05 : 3.1;
@@ -362,11 +403,22 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     sceneRef.current = { renderer, scene, camera };
     return () => {
       disposed = true; cancelAnimationFrame(frame); observer.disconnect();
+      window.removeEventListener("keydown",keyDown);window.removeEventListener("keyup",keyUp);window.removeEventListener("blur",clearKeys);
       renderer.domElement.removeEventListener("pointerdown", pointerStart); renderer.domElement.removeEventListener("pointermove", pointerMove); renderer.domElement.removeEventListener("pointerup", pointerEnd); renderer.domElement.removeEventListener("pointercancel", pointerEnd); renderer.domElement.removeEventListener("wheel", wheel);
       renderer.dispose(); routeLine.geometry.dispose(); host.removeChild(renderer.domElement); sceneRef.current = null;
       scene.traverse(obj => { if (obj.geometry) obj.geometry.dispose(); if (obj.material) (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach(m => m.dispose()); });
     };
   }, [sites]);
   useEffect(() => { if (sceneRef.current) sceneRef.current.renderer.render(sceneRef.current.scene, sceneRef.current.camera); }, [game]);
-  return <div ref={hostRef} className="three-village-host" role="img" aria-label="Interactive three-dimensional isometric flood-hit village. Tap a volunteer to select, tap a rescue beacon to dispatch, drag to pan, and pinch or scroll to zoom." />;
+  const setDirection=(x,z)=>{controlsRef.current={...controlsRef.current,x,z};};
+  const hold=(e,x,z)=>{e.currentTarget.setPointerCapture(e.pointerId);setDirection(x,z);};
+  const release=()=>setDirection(0,0);
+  return <div ref={hostRef} className="three-village-host" aria-label="Interactive 3D rescue village. Move with WASD, arrow keys or touch controls. Drag to pan and pinch or scroll to zoom.">
+    <div className="player-control-pad" onPointerDown={e=>e.stopPropagation()} onPointerMove={e=>e.stopPropagation()} onPointerUp={e=>e.stopPropagation()}>
+      <button aria-label="Move forward" onPointerDown={e=>hold(e,0,-1)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▲</button>
+      <div><button aria-label="Move left" onPointerDown={e=>hold(e,-1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>◀</button><button aria-label="Move backward" onPointerDown={e=>hold(e,0,1)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▼</button><button aria-label="Move right" onPointerDown={e=>hold(e,1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▶</button></div>
+    </div>
+    <button className="player-sprint" onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);controlsRef.current.sprint=true;}} onPointerUp={()=>{controlsRef.current.sprint=false;}} onPointerCancel={()=>{controlsRef.current.sprint=false;}}>SPRINT</button>
+    <div className="player-control-hint">WASD / ARROWS · MOVE · SHIFT / SPRINT</div>
+  </div>;
 }
