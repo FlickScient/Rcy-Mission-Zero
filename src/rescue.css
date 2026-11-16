@@ -230,3 +230,23 @@
  .player-control-pad{left:5px!important;bottom:5px!important;transform:scale(.68)!important}
  .player-sprint{right:6px!important;bottom:8px!important}
 }
+
+
+/* Android touch controls: long presses must stay inside the game, never open Chrome's callout menu. */
+.rescue-shell,.rescue-shell *,.three-village-host,.three-village-host *{
+ -webkit-touch-callout:none!important;
+ -webkit-user-select:none!important;
+ user-select:none!important;
+}
+.rescue-shell button,.three-village-host button{
+ touch-action:none!important;
+ -webkit-tap-highlight-color:transparent;
+}
+.three-village-host{overscroll-behavior:none;touch-action:none}
+.three-village-canvas{touch-action:none!important}
+.player-control-pad,.player-control-pad button,.player-sprint,.civilian-interaction button{
+ -webkit-touch-callout:none!important;
+ -webkit-user-select:none!important;
+ user-select:none!important;
+ touch-action:none!important;
+}
