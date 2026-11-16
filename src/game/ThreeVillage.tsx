@@ -296,18 +296,6 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       },undefined,()=>{});
     };
     const cityBuildingSpecs=[
-    const loadVillageBuilding=(col,row,kind,index)=>{
-      const letters="abcdefghijklmnopqrstu",file="building-type-"+letters[index%letters.length]+".glb",p=point(col,row);
-      assetLoader.load(assetRoot+"packs/city-kit-suburban/"+file,gltf=>{
-        if(!host.isConnected){gltf.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();});return;}
-        const model=gltf.scene,box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
-        const width=kind==="school"||kind==="clinic"?2.18:1.92,depth=kind==="school"||kind==="clinic"?2.18:1.92,height=kind==="school"?3.45:kind==="clinic"?3.1:2.65;
-        const sx=width/Math.max(size.x,.001),sy=height/Math.max(size.y,.001),sz=depth/Math.max(size.z,.001);
-        model.scale.set(sx,sy,sz);model.position.set(-center.x*sx,-box.min.y*sy,-center.z*sz);
-        model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
-        const wrapper=new THREE.Group();wrapper.position.set(p.x,.02,p.z);wrapper.add(model);world.add(wrapper);
-      },undefined,()=>{if(host.isConnected)addHouse(world,col,row,kind);});
-    };
       {x:-25,z:-14,width:6.2,depth:5.2,floors:3,file:"building-a.glb"},
       {x:-15,z:-14,width:5.4,depth:5.4,floors:2,file:"building-b.glb"},
       {x:-25,z:0,width:6.4,depth:5.8,floors:4,file:"building-c.glb"},
@@ -321,6 +309,18 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       {x:25,z:14,width:5.8,depth:5.4,floors:2,file:"building-k.glb"},
       {x:-5,z:-19,width:5.4,depth:4.8,floors:2,file:"building-l.glb"}
     ];
+    const loadVillageBuilding=(col,row,kind,index)=>{
+      const letters="abcdefghijklmnopqrstu",file="building-type-"+letters[index%letters.length]+".glb",p=point(col,row);
+      assetLoader.load(assetRoot+"packs/city-kit-suburban/"+file,gltf=>{
+        if(!host.isConnected){gltf.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();});return;}
+        const model=gltf.scene,box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+        const width=kind==="school"||kind==="clinic"?2.18:1.92,depth=kind==="school"||kind==="clinic"?2.18:1.92,height=kind==="school"?3.45:kind==="clinic"?3.1:2.65;
+        const sx=width/Math.max(size.x,.001),sy=height/Math.max(size.y,.001),sz=depth/Math.max(size.z,.001);
+        model.scale.set(sx,sy,sz);model.position.set(-center.x*sx,-box.min.y*sy,-center.z*sz);
+        model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+        const wrapper=new THREE.Group();wrapper.position.set(p.x,.02,p.z);wrapper.add(model);world.add(wrapper);
+      },undefined,()=>{if(host.isConnected)addHouse(world,col,row,kind);});
+    };
     const cityBuildings=cityBuildingSpecs.map(({x,z,width,depth})=>({x,z,width,depth}));
     cityBuildingSpecs.forEach(spec=>{
       assetLoader.load(assetRoot+"packs/city-kit-commercial/"+spec.file,gltf=>{
