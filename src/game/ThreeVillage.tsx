@@ -646,16 +646,17 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
   }, [sites]);
   useEffect(() => { if (sceneRef.current) sceneRef.current.renderer.render(sceneRef.current.scene, sceneRef.current.camera); }, [game]);
   const setDirection=(x,z)=>{controlsRef.current={...controlsRef.current,x,z};};
-  const hold=(e,x,z)=>{e.currentTarget.setPointerCapture(e.pointerId);setDirection(x,z);};
-  const release=()=>setDirection(0,0);
+  const hold=(e,x,z)=>{e.preventDefault();e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);setDirection(x,z);};
+  const release=(e)=>{if(e){e.preventDefault?.();e.stopPropagation?.();}setDirection(0,0);};
+  const stopLongPress=(e)=>{e.preventDefault();e.stopPropagation();};
   return <div ref={hostRef} className="three-village-host" aria-label="Interactive 3D rescue village. Move with WASD, arrow keys or touch controls. Drag to pan and pinch or scroll to zoom.">
-    <div className="player-control-pad" onPointerDown={e=>e.stopPropagation()} onPointerMove={e=>e.stopPropagation()} onPointerUp={e=>e.stopPropagation()}>
-      <button aria-label="Move forward" onPointerDown={e=>hold(e,0,-1)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▲</button>
-      <div><button aria-label="Move left" onPointerDown={e=>hold(e,-1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>◀</button><button aria-label="Move backward" onPointerDown={e=>hold(e,0,1)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▼</button><button aria-label="Move right" onPointerDown={e=>hold(e,1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▶</button></div>
+    <div className="player-control-pad" onContextMenu={stopLongPress} onPointerDown={e=>e.stopPropagation()} onPointerMove={e=>e.stopPropagation()} onPointerUp={e=>e.stopPropagation()}>
+      <button aria-label="Move forward" onContextMenu={stopLongPress} onPointerDown={e=>hold(e,0,-1)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▲</button>
+      <div><button aria-label="Move left" onContextMenu={stopLongPress} onPointerDown={e=>hold(e,-1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>◀</button><button aria-label="Move backward" onContextMenu={stopLongPress} onPointerDown={e=>hold(e,0,1)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▼</button><button aria-label="Move right" onContextMenu={stopLongPress} onPointerDown={e=>hold(e,1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▶</button></div>
     </div>
-    <button className="player-sprint" onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);controlsRef.current.sprint=true;}} onPointerUp={()=>{controlsRef.current.sprint=false;}} onPointerCancel={()=>{controlsRef.current.sprint=false;}}>SPRINT</button>
+    <button className="player-sprint" aria-label="Hold to sprint" onContextMenu={stopLongPress} onPointerDown={e=>{e.preventDefault();e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);controlsRef.current.sprint=true;}} onPointerUp={e=>{e.preventDefault();controlsRef.current.sprint=false;}} onPointerCancel={()=>{controlsRef.current.sprint=false;}} onLostPointerCapture={()=>{controlsRef.current.sprint=false;}}>SPRINT</button>
     <div className="civilian-status" ref={civilianStatusRef}>CIVILIANS  ·  8 in area</div>
-    <div className="civilian-interaction" onPointerDown={e=>e.stopPropagation()}><span>{interactionMessage}</span><button onClick={()=>actionRef.current()}>HELP NEARBY · E</button></div>
+    <div className="civilian-interaction" onContextMenu={stopLongPress} onPointerDown={e=>e.stopPropagation()}><span>{interactionMessage}</span><button onContextMenu={stopLongPress} onClick={()=>actionRef.current()}>HELP NEARBY · E</button></div>
     <div className="player-control-hint">WASD / ARROWS · MOVE · SHIFT / SPRINT</div>
   </div>;
 }
