@@ -1,76 +1,12 @@
-export const missions = [
-  {
-    id: "roadside-collision-001",
-    code: "FIELD SCENARIO 001",
-    title: "The Roadside Collision",
-    category: "URBAN RESPONSE",
-    level: 1,
-    estimatedMinutes: 3,
-    brief: "You and two volunteers arrive at a roadside collision. A motorbike is down. One person is sitting nearby, shaken but conscious. A damaged electrical pole is leaning toward the road, and a small crowd is gathering.",
-    hazard: "POTENTIAL ELECTRICAL HAZARD",
-    choices: [
-      {
-        id: "secure",
-        title: "Pause, assess hazards and keep everyone clear",
-        detail: "Create distance from the scene and alert the appropriate emergency services about the damaged pole."
-      },
-      {
-        id: "rush",
-        title: "Rush straight to the injured person",
-        detail: "Try to help immediately before the situation gets worse."
-      },
-      {
-        id: "crowd",
-        title: "Ask bystanders to move the bike and pole debris",
-        detail: "Clear the road quickly so traffic can move again."
-      }
-    ],
-    evaluation: {
-      secure: {
-        correct: true,
-        score: 100,
-        title: "Good call.",
-        explanation: "Good response starts with scene safety. A damaged electrical pole or downed line can create a serious hazard. Keep people away, do not touch the pole or wires, and contact the relevant emergency services and utility authority. Only approach when the scene is confirmed safe.",
-        takeaway: "Scene safety comes before direct assistance. Never approach downed electrical equipment or wires."
-      },
-      rush: {
-        correct: false,
-        score: 0,
-        title: "That decision adds risk.",
-        explanation: "The damaged electrical pole may make the scene unsafe. Moving directly toward the injured person before hazards are assessed could put volunteers and bystanders at risk.",
-        takeaway: "Pause and assess hazards before approaching. Keep clear of damaged electrical equipment and contact emergency services."
-      },
-      crowd: {
-        correct: false,
-        score: 0,
-        title: "That decision adds risk.",
-        explanation: "Bystanders should not be asked to move a damaged electrical pole, wires, or nearby debris. The scene must be kept clear until the hazard is assessed by the appropriate responders.",
-        takeaway: "Do not touch or move damaged electrical equipment. Establish distance and alert the appropriate responders."
-      }
-    }
-  }
+export const missions=[
+{id:"roadside-001",title:"The Roadside Collision",category:"URBAN RESPONSE",level:1,brief:"A motorbike is down, a person is conscious nearby, and a damaged electrical pole leans toward the road.",hazard:"ELECTRICAL HAZARD",choices:[["secure","Keep everyone clear and alert emergency services","Do not touch the pole, wires or nearby objects."],["rush","Rush directly to the injured person","Approach before the hazard is assessed."],["move","Ask bystanders to move debris","Clear objects near the damaged pole."]],answers:{secure:[100,true,"You protected the scene.","Keep people away from damaged electrical equipment and alert emergency and utility services. Wait for qualified responders to confirm the scene is safe.","Scene safety comes before direct assistance."],rush:[0,false,"You added another casualty risk.","Approaching before an electrical hazard is assessed can expose more people to danger.","Do not enter an unsafe scene."],move:[0,false,"The scene is not safe to clear.","Bystanders must not move damaged electrical equipment or nearby objects.","Never touch damaged electrical equipment."]}},
+{id:"flood-002",title:"The Rising Water",category:"DISASTER READINESS",level:1,brief:"Heavy rain has flooded a low road. Water is rising and a designated shelter is on higher ground.",hazard:"FAST-MOVING FLOODWATER",choices:[["evacuate","Avoid the flooded road and follow official evacuation guidance","Move to higher ground by a safe route."],["drive","Drive across the flooded road","Assume the water is shallow."],["wait","Wait beside the road","Remain in the low-lying area."]],answers:{evacuate:[100,true,"You chose the safer route.","Floodwater depth and road conditions are deceptive. Never walk or drive through floodwater. Follow official warnings and use a safe route to higher ground.","Never attempt to cross floodwater."],drive:[0,false,"A familiar road can become deadly.","Moving water can hide damaged roads and sweep vehicles away.","Turn around; do not enter floodwater."],wait:[20,false,"Waiting may remove your safe options.","Remaining in a low-lying area while water rises can reduce escape options.","Act on official warnings early."]}},
+{id:"fire-003",title:"Smoke in the Hallway",category:"FIRE SAFETY",level:2,brief:"Smoke is reported in a corridor during a college event. People remain inside and a safe exit is available.",hazard:"POSSIBLE STRUCTURE FIRE",choices:[["alert","Raise the alarm, evacuate and call fire services","Use a safe exit; do not use lifts or re-enter."],["investigate","Walk toward the smoke","Find its source before alerting people."],["collect","Ask everyone to collect belongings","Give people time to pack."]],answers:{alert:[100,true,"You prioritized evacuation.","Raise the alarm and leave by a safe route. Do not use lifts, investigate smoke or re-enter. Contact the fire service.","Leave belongings behind and use a safe exit."],investigate:[0,false,"You delayed the warning.","Smoke can spread quickly. Untrained people should not investigate a possible fire.","Raise the alarm and evacuate."],collect:[0,false,"You added an avoidable delay.","Do not delay evacuation to collect belongings.","People and safety come first."]}},
+{id:"quake-004",title:"The Ground Moves",category:"EARTHQUAKE READINESS",level:2,brief:"Strong shaking begins in a classroom. Shelves are nearby and students move toward the doorway.",hazard:"ACTIVE EARTHQUAKE",choices:[["cover","Drop, cover and hold on","Protect your head and neck until shaking stops."],["run","Run outside during shaking","Move past windows and falling objects."],["doorway","Gather in the doorway","Assume all doorways are safest."]],answers:{cover:[100,true,"You protected yourself.","During shaking, drop, cover and hold on. Stay away from windows and objects that may fall.","Drop, cover and hold on."],run:[0,false,"Running during shaking increases exposure.","Movement through a shaking building exposes people to falling objects and broken glass.","Protect yourself until shaking stops."],doorway:[20,false,"A doorway is not a universal safe zone.","General guidance emphasizes drop, cover and hold on rather than assuming every doorway is safest.","Use sturdy cover and protect your head and neck."]}},
+{id:"heat-005",title:"Heat on the Field",category:"HEAT AWARENESS",level:2,brief:"At an outdoor event on a very hot day, a participant becomes confused and collapses.",hazard:"POSSIBLE HEAT STROKE",choices:[["emergency","Call emergency medical help and begin safe cooling","Move to a cooler place; follow dispatcher instructions."],["water","Give a large drink and wait","Assume dehydration is the only cause."],["rest","Let the person rest in the sun","Wait for them to feel better."]],answers:{emergency:[100,true,"You treated this as urgent.","Confusion and collapse in extreme heat can signal heat stroke. Call emergency medical help, move the person to a cooler place and follow dispatcher guidance. Do not give fluids to someone with altered consciousness.","Suspected heat stroke needs urgent medical help and rapid cooling."],water:[0,false,"This could delay urgent care.","Giving fluids to someone with altered consciousness can be unsafe.","Call emergency medical help."],rest:[0,false,"This is not a wait-and-see situation.","Collapse and confusion in extreme heat require urgent medical assessment.","Treat suspected heat stroke as an emergency."]}},
+{id:"crowd-006",title:"The Crowd Surge",category:"EVENT SAFETY",level:3,brief:"A public event is ending. People press toward one narrow exit and someone falls.",hazard:"CROWD CRUSH RISK",choices:[["notify","Alert event control and emergency services","Follow the venue's trained crowd-management plan."],["push","Push through the crowd","Force a path against the flow."],["run","Tell everyone to run","Move faster toward the narrow exit."]],answers:{notify:[100,true,"You escalated through the right channel.","Alert trained event control and emergency services. Follow the venue's crowd-safety plan and avoid actions that increase pressure or panic.","Never create more pressure in a compressed crowd."],push:[0,false,"Pushing can worsen compression.","Forcing a path through a dense crowd can increase pressure and injuries.","Do not push against crowd flow."],run:[0,false,"Running increases the danger.","Encouraging people to run toward a narrow exit can intensify a crowd surge.","Avoid panic and activate the trained response plan."]}}
 ];
-
-export function findMission(missionId) {
-  return missions.find((mission) => mission.id === missionId);
-}
-
-export function publicMission(mission) {
-  if (!mission) return null;
-  return {
-    id: mission.id,
-    code: mission.code,
-    title: mission.title,
-    category: mission.category,
-    level: mission.level,
-    estimatedMinutes: mission.estimatedMinutes,
-    brief: mission.brief,
-    hazard: mission.hazard,
-    choices: mission.choices
-  };
-}
-
-export function evaluateChoice(mission, choiceId) {
-  if (!mission || !Object.hasOwn(mission.evaluation, choiceId)) return null;
-  return mission.evaluation[choiceId];
-}
+export const findMission=id=>missions.find(m=>m.id===id);
+export const publicMission=m=>({id:m.id,title:m.title,category:m.category,level:m.level,brief:m.brief,hazard:m.hazard,choices:m.choices.map(([id,title,detail])=>({id,title,detail}))});
+export const evaluateChoice=(m,id)=>m?.answers[id]?{score:m.answers[id][0],correct:m.answers[id][1],title:m.answers[id][2],explanation:m.answers[id][3],takeaway:m.answers[id][4]}:null;
+export function evaluateCommand(a){const k=["medical","water","shelter","communications"];if(!a||k.some(x=>!Number.isInteger(a[x])||a[x]<0||a[x]>10)||k.reduce((s,x)=>s+a[x],0)!==10)return null;const score=Math.max(0,100-Math.abs(a.medical-3)*12-Math.abs(a.water-3)*12-Math.abs(a.shelter-2)*12-Math.abs(a.communications-2)*12);return{score,correct:score>=76,title:score>=90?"Balanced deployment.":score>=76?"A workable response.":"Your allocation leaves gaps.",explanation:"This simplified exercise rewards balanced planning across medical support, safe water, shelter and communications. Real incidents require local assessment and trained responders.",takeaway:"Reassess needs as reliable information changes."};}

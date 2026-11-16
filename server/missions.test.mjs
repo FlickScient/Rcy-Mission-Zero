@@ -1,27 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { evaluateChoice, findMission, missions, publicMission } from "./missions.mjs";
-
-test("mission catalogue exposes the demo mission", () => {
-  assert.equal(missions.length, 1);
-  assert.equal(findMission("roadside-collision-001")?.title, "The Roadside Collision");
-});
-
-test("public mission does not expose answer keys", () => {
-  const mission = publicMission(findMission("roadside-collision-001"));
-  assert.ok(mission.choices.length > 0);
-  assert.equal("evaluation" in mission, false);
-  assert.equal("correct" in mission.choices[0], false);
-});
-
-test("safe decision receives server-defined score", () => {
-  const result = evaluateChoice(findMission("roadside-collision-001"), "secure");
-  assert.equal(result.correct, true);
-  assert.equal(result.score, 100);
-});
-
-test("unsafe or unknown decisions cannot receive a passing score", () => {
-  const mission = findMission("roadside-collision-001");
-  assert.equal(evaluateChoice(mission, "rush").score, 0);
-  assert.equal(evaluateChoice(mission, "not-a-choice"), null);
-});
+import test from"node:test";import assert from"node:assert/strict";import{missions,findMission,publicMission,evaluateChoice,evaluateCommand}from"./missions.mjs";
+test("six unique scenarios hide answer keys",()=>{assert.equal(missions.length,6);assert.equal(new Set(missions.map(m=>m.id)).size,6);for(const m of missions){assert.equal("answers"in publicMission(m),false);assert.ok(Object.values(m.answers).some(x=>x[1]));}});
+test("all choices have server-side outcomes",()=>{for(const m of missions){for(const c of m.choices)assert.ok(evaluateChoice(m,c[0]));assert.equal(evaluateChoice(m,"bad"),null)}assert.equal(findMission("bad"),undefined)});
+test("command allocation validates ten integer units",()=>{assert.equal(evaluateCommand({medical:3,water:3,shelter:2,communications:2}).score,100);assert.equal(evaluateCommand({medical:3,water:3,shelter:2,communications:1}),null);assert.equal(evaluateCommand({medical:3.5,water:2.5,shelter:2,communications:2}),null)});
