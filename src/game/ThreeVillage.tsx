@@ -114,40 +114,56 @@ function addCityCar(parent,x,z,color="#b9c4c1",rotation=0){
   return g;
 }
 function addHouse(parent, col, row, kind = "home", label = "") {
-  const p = point(col, row); const g = new THREE.Group(); g.position.set(p.x, .03, p.z); parent.add(g);
-  const scale = kind === "school" ? 1.22 : kind === "shed" ? .78 : kind === "clinic" ? 1.08 : 1;
-  const wall = mat(kind === "clinic" ? "#e5d9bd" : kind === "school" ? "#e6dfc8" : "#d7c39d", .94, { map: wallTexture });
-  const side = mat(kind === "clinic" ? "#b9aa8f" : "#ae936e", .95, { map: wallTexture });
-  const roof = mat(kind === "clinic" ? "#a9413c" : kind === "school" ? "#3d6380" : "#854e3b", .78, { map: roofTexture });
-  const base = addBox(g, 1.62 * scale, 1.05 * scale, 1.42 * scale, wall, 0, .63 * scale, 0);
-  base.material = wall;
-  addBox(g, .12, .92 * scale, 1.44 * scale, side, .82 * scale, .62 * scale, 0);
-  // Four-sided pitched roof with visible eaves and ridge.
-  const roofMesh = new THREE.Mesh(new THREE.ConeGeometry(1.22 * scale, .9 * scale, 4), roof);
-  roofMesh.rotation.y = Math.PI / 4; roofMesh.position.y = 1.55 * scale; roofMesh.castShadow = true; g.add(roofMesh);
-  addBox(g, 1.9 * scale, .09, 1.68 * scale, mat("#6d4938"), 0, 1.13 * scale, 0);
-  const door = addBox(g, .34 * scale, .64 * scale, .055, mat("#654735"), -.28 * scale, .35 * scale, .74 * scale);
-  door.position.z = .74 * scale;
-  const windowMat = new THREE.MeshStandardMaterial({ color: "#8ebdc0", metalness: .18, roughness: .25 });
-  for (const x of [-.62, .45]) {
-    addBox(g, .32 * scale, .28 * scale, .06, windowMat, x * scale, .76 * scale, .73 * scale);
-    addBox(g, .36 * scale, .045, .075, mat("#f1e4c8"), x * scale, .76 * scale, .77 * scale, false);
+  const p = point(col, row), g = new THREE.Group(); g.position.set(p.x, .02, p.z); parent.add(g);
+  const shed = kind === "shed", clinic = kind === "clinic", school = kind === "school";
+  const width = shed ? 1.42 : 1.78, depth = shed ? 1.35 : 1.72, floors = shed ? 1 : school ? 2 : 2;
+  const floorH = shed ? 1.35 : school ? 1.42 : 1.28, height = floorH * floors;
+  const wallColor = clinic ? "#d9d4c6" : school ? "#d0c9ad" : shed ? "#9b8b70" : "#c7c3b5";
+  const sideColor = clinic ? "#a9aaa0" : school ? "#8f9b91" : "#8b8e83";
+  const glassColor = clinic ? "#78a8aa" : "#668c98";
+  const wall = mat(wallColor,.88,{map:wallTexture}), side = mat(sideColor,.9);
+  const glass = new THREE.MeshStandardMaterial({color:glassColor,metalness:.24,roughness:.28});
+  addBox(g,width,height,depth,wall,0,height/2,0);
+  addBox(g,.09,height,depth+.04,side,width/2+.02,height/2,0);
+  for(let floor=0;floor<floors;floor++){
+    const y=.28+floor*floorH;
+    addBox(g,width+.06,.09,depth+.06,side,0,y,0,false);
+    for(let bay=0;bay<2;bay++){
+      const x=(bay-.5)*.78;
+      addBox(g,.48,.57,.055,glass,x,y+.48,depth/2+.035,false);
+      addBox(g,.045,.61,.075,side,x,y+.48,depth/2+.07,false);
+      addBox(g,.48,.57,.055,glass,x,y+.48,-depth/2-.035,false);
+    }
+    for(const sideSign of [-1,1])for(let bay=0;bay<2;bay++){
+      const z=(bay-.5)*.72;
+      addBox(g,.055,.54,.43,glass,sideSign*(width/2+.035),y+.46,z,false);
+    }
   }
-  if (kind === "clinic") {
-    addBox(g, .42, .42, .05, mat("#fff8e8"), 0, 1.95 * scale, .74);
-    addBox(g, .09, .31, .07, mat("#c84640"), 0, 1.95 * scale, .78, false);
-    addBox(g, .28, .09, .07, mat("#c84640"), 0, 1.95 * scale, .78, false);
+  addBox(g,width+.22,.14,depth+.22,mat("#6f7770"),0,height+.07,0);
+  for(const sideSign of [-1,1]){
+    addBox(g,width+.22,.27,.09,side,0,height+.19,sideSign*(depth/2+.055));
+    addBox(g,.09,.27,depth+.22,side,sideSign*(width/2+.055),height+.19,0);
   }
-  if (kind === "school") {
-    addBox(g, .045, .9, .045, mat("#574b3d"), .62, 2.05, -.15);
-    const flag = new THREE.Mesh(new THREE.BoxGeometry(.48, .26, .025), mat("#d34b42"));
-    flag.position.set(.86, 2.35, -.15); flag.castShadow = true; g.add(flag);
+  addBox(g,.36,.72,.07,mat("#594b3c"),-.48,.38,depth/2+.045);
+  addBox(g,width*.7,.12,.38,mat(clinic?"#b74e45":school?"#d2ad62":"#9c7650"),0,.98,depth/2+.2);
+  if(!shed){
+    const tank=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.42,10),mat("#87928c"));
+    tank.position.set(width*.22,height+.38,-depth*.18);tank.castShadow=true;g.add(tank);
+    addBox(g,.48,.1,.42,mat("#747d79"),-width*.22,height+.18,depth*.18);
   }
-  if (label) {
-    // Floating label is represented by a clean, readable marker in the HUD;
-    // keep the 3D scene uncluttered at phone scale.
-    const marker = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .35, 6), mat("#e8d7ae"));
-    marker.position.set(0, 2.05 * scale, 0); g.add(marker);
+  if(clinic){
+    addBox(g,.42,.38,.05,mat("#fff8e8"),0,height+.34,depth/2+.06,false);
+    addBox(g,.075,.28,.07,mat("#c84640"),0,height+.34,depth/2+.1,false);
+    addBox(g,.25,.075,.07,mat("#c84640"),0,height+.34,depth/2+.1,false);
+  }
+  if(school){
+    addBox(g,.035,.85,.035,mat("#594b3c"),.55,height+.48,-.18);
+    const flag=new THREE.Mesh(new THREE.BoxGeometry(.38,.22,.025),mat("#d34b42"));
+    flag.position.set(.74,height+.72,-.18);g.add(flag);
+  }
+  if(label){
+    const marker=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.35,6),mat("#e8d7ae"));
+    marker.position.y=height+.45;g.add(marker);
   }
   return g;
 }
