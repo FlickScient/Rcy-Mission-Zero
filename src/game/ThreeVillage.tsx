@@ -296,6 +296,18 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       },undefined,()=>{});
     };
     const cityBuildingSpecs=[
+    const loadVillageBuilding=(col,row,kind,index)=>{
+      const letters="abcdefghijklmnopqrstu",file="building-type-"+letters[index%letters.length]+".glb",p=point(col,row);
+      assetLoader.load(assetRoot+"packs/city-kit-suburban/"+file,gltf=>{
+        if(!host.isConnected){gltf.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();});return;}
+        const model=gltf.scene,box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+        const width=kind==="school"||kind==="clinic"?2.18:1.92,depth=kind==="school"||kind==="clinic"?2.18:1.92,height=kind==="school"?3.45:kind==="clinic"?3.1:2.65;
+        const sx=width/Math.max(size.x,.001),sy=height/Math.max(size.y,.001),sz=depth/Math.max(size.z,.001);
+        model.scale.set(sx,sy,sz);model.position.set(-center.x*sx,-box.min.y*sy,-center.z*sz);
+        model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+        const wrapper=new THREE.Group();wrapper.position.set(p.x,.02,p.z);wrapper.add(model);world.add(wrapper);
+      },undefined,()=>{if(host.isConnected)addHouse(world,col,row,kind);});
+    };
       {x:-25,z:-14,width:6.2,depth:5.2,floors:3,file:"building-a.glb"},
       {x:-15,z:-14,width:5.4,depth:5.4,floors:2,file:"building-b.glb"},
       {x:-25,z:0,width:6.4,depth:5.8,floors:4,file:"building-c.glb"},
@@ -349,7 +361,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
         const ripple = new THREE.Mesh(new THREE.TorusGeometry(.48, .018, 5, 28), mat("#b8e5df", .25, { transparent: true, opacity: .55 }));
         ripple.rotation.x = Math.PI / 2; ripple.position.set(p.x, .06, p.z); ripple.userData.ripple = true; world.add(ripple);
       } else if (kind === "rubble") addRubble(world, col, row);
-      else if (kind === "shed") addHouse(world, col, row, "shed");
+      else if (kind === "shed") loadVillageBuilding(col,row,"shed",row*COLS+col);
     }
     // Winding raised village road with a lighter gravel shoulder.
     const roadPoints = [[-12,-4.5],[-8,-4.2],[-5,-2.8],[-2,-2.3],[1,-.5],[4,-1.2],[7,-2.8],[11,-2.2],[12,-1.5]].map(([x,z]) => new THREE.Vector3(x,.075,z));
@@ -372,7 +384,8 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     const trees = treeSpots.map(([x,z], i) => addTree(world, x, z, .76 + (i % 4) * .11, i));
     // Distinctive public buildings and homes across the sector.
     const buildingKinds = new Map([[2 + "," + 2,"home"],[8 + "," + 1,"school"],[9 + "," + 5,"clinic"],[3 + "," + 6,"home"],[4 + "," + 1,"home"],[10 + "," + 2,"home"],[1 + "," + 3,"home"],[4 + "," + 5,"home"],[10 + "," + 6,"home"],[0 + "," + 1,"home"]]);
-    for (const [key, kind] of buildingKinds) { const [c,r] = key.split(",").map(Number); addHouse(world, c, r, kind); }
+    let villageBuildingIndex=0;
+    for (const [key, kind] of buildingKinds) { const [c,r] = key.split(",").map(Number); loadVillageBuilding(c,r,kind,villageBuildingIndex++); }
     const siteNodes = new Map();
     const siteMeshes = [];
     const lastSaved = Object.fromEntries(sites.map(site => [site.id, 0]));
