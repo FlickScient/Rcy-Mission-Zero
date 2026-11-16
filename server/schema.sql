@@ -26,3 +26,28 @@ CREATE TABLE IF NOT EXISTS competition_seasons(
  CHECK(ends_at>starts_at)
 );
 CREATE INDEX IF NOT EXISTS competition_seasons_dates ON competition_seasons(starts_at,ends_at);
+
+-- Rescue Village (isometric mission) persistence.
+-- Every row here is written from a server-computed result
+-- (see server/rescue.mjs simulateRescue) -- never from a client-
+-- submitted score, XP amount or survivor count directly.
+CREATE TABLE IF NOT EXISTS rescue_attempts(
+ id BIGSERIAL PRIMARY KEY,
+ attempt_id UUID UNIQUE NOT NULL,
+ user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+ survivors_rescued INTEGER NOT NULL CHECK(survivors_rescued>=0),
+ total_survivors INTEGER NOT NULL,
+ completed BOOLEAN NOT NULL,
+ seconds_used INTEGER NOT NULL,
+ kits_used INTEGER NOT NULL,
+ water_used INTEGER NOT NULL,
+ created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS rescue_attempts_user_date ON rescue_attempts(user_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS rescue_progress(
+ user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+ best_survivors INTEGER NOT NULL DEFAULT 0,
+ best_xp INTEGER NOT NULL DEFAULT 0,
+ best_completed BOOLEAN NOT NULL DEFAULT FALSE
+);
+INSERT INTO achievements VALUES('rescue_commander','Rescue Commander','Fully evacuate the Chatkhil flood zone in Rescue Village.',50) ON CONFLICT DO NOTHING;
