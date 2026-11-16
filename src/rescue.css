@@ -189,3 +189,44 @@
  .map-legend{top:7px!important;right:7px!important}
  .rescue-map-tools{top:42px!important;right:7px!important}
 }
+
+
+/* Immersive field HUD v2 — keep the world visible; interaction lives on the map. */
+.rescue-shell{background:#101813!important}
+.rescue-heading{top:10px!important;left:10px!important;width:238px!important;padding:8px 10px!important;border-radius:10px!important;background:linear-gradient(115deg,#101b16ee,#101b16c9)!important}
+.rescue-heading .section-kicker{font-size:6px!important}
+.rescue-heading h1{font-size:19px!important}
+.rescue-heading p{display:none!important}
+.game-header-actions{top:7px!important;right:7px!important}
+.rescue-pause,.game-exit{min-height:28px!important;padding:0 8px!important;font-size:7px!important}
+.rescue-hud{top:62px!important;left:10px!important;width:238px!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:1px!important;border-radius:8px!important;background:#607064!important}
+.rescue-hud>div{padding:7px 6px!important;text-align:center!important;background:#17231c!important}
+.rescue-hud span{font-size:5px!important;letter-spacing:.04em!important}
+.rescue-hud b{font-size:13px!important;margin-top:3px!important}
+.rescue-site-actions,.rescue-control-grid{display:none!important}
+.map-legend{top:10px!important;right:10px!important;left:auto!important;bottom:auto!important;padding:6px 8px!important;gap:8px!important;font-size:6px!important}
+.map-legend i{width:6px!important;height:6px!important}
+.civilian-interaction{top:10px!important;left:50%!important;max-width:min(420px,38vw)!important;padding:6px 8px!important;border-radius:9px!important;font-size:8px!important}
+.civilian-interaction button{padding:6px 8px!important;font-size:7px!important}
+.civilian-status{top:48px!important;right:10px!important;max-width:220px!important;padding:6px 8px!important;font-size:6px!important}
+.player-control-pad{left:12px!important;bottom:12px!important;transform:scale(.78)!important;transform-origin:bottom left!important}
+.player-control-pad button{width:38px!important;height:35px!important}
+.player-sprint{right:12px!important;bottom:14px!important;width:64px!important;height:39px!important;font-size:8px!important}
+.player-control-hint{display:none!important}
+.rescue-map-wrap{background:#738d70!important}
+.rescue-map-wrap .three-village-canvas{filter:saturate(.94) contrast(1.04)}
+.rescue-result{z-index:30!important}
+@media(max-width:760px){
+ .rescue-heading{top:6px!important;left:6px!important;width:190px!important;padding:6px 7px!important}
+ .rescue-heading h1{font-size:15px!important}
+ .rescue-hud{top:49px!important;left:6px!important;width:190px!important}
+ .rescue-hud>div{padding:5px 3px!important}
+ .rescue-hud span{font-size:4.5px!important}
+ .rescue-hud b{font-size:11px!important}
+ .civilian-interaction{top:7px!important;left:auto!important;right:6px!important;transform:none!important;max-width:calc(100vw - 210px)!important}
+ .civilian-interaction span{max-width:110px!important;font-size:6px!important}
+ .civilian-status{top:44px!important;right:6px!important;max-width:calc(100vw - 205px)!important;font-size:5px!important}
+ .map-legend{display:none!important}
+ .player-control-pad{left:5px!important;bottom:5px!important;transform:scale(.68)!important}
+ .player-sprint{right:6px!important;bottom:8px!important}
+}
