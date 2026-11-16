@@ -248,7 +248,8 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     // Raised earth plinth and a continuous, textured-looking tile field.
     const base = new THREE.Mesh(new THREE.BoxGeometry(68, .55, 52), mat("#665e45"));
     base.position.y = -.32; base.receiveShadow = true; base.castShadow = true; world.add(base);
-    const cityGround = new THREE.Mesh(new THREE.PlaneGeometry(68,52),mat("#89906e",.98));
+    const fieldMaterial=mat("#788d68",.98,{map:grassTexture}); fieldMaterial.map.repeat.set(12,9);
+    const cityGround = new THREE.Mesh(new THREE.PlaneGeometry(68,52),fieldMaterial);
     cityGround.rotation.x=-Math.PI/2;cityGround.position.y=-.045;cityGround.receiveShadow=true;world.add(cityGround);
     // Connected outer neighbourhood: urban streets, sidewalks, mixed-use blocks and parked vehicles.
     const asphalt=mat("#555b59",.96), pavement=mat("#b8b19e",.94), lane=mat("#e5d5a9",.75);
@@ -276,9 +277,10 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     ];
     for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
       const p = point(col, row), kind = obstacleMap.get(col + "," + row);
-      const tile = new THREE.Mesh(new THREE.BoxGeometry(TILE - .025, .12, TILE - .025), kind === "water" ? mat("#397e91", .28, { metalness: .08, map: waterTexture }) : groundMats[(col * 7 + row * 3) % groundMats.length]);
-      tile.position.set(p.x, -.025, p.z); tile.receiveShadow = true; world.add(tile);
+      // The playable block is one continuous terrain surface, not a checkerboard of raised square tiles.
       if (kind === "water") {
+        const pool = new THREE.Mesh(new THREE.PlaneGeometry(TILE * .98, TILE * .98), mat("#397e91", .28, { metalness: .08, map: waterTexture }));
+        pool.rotation.x = -Math.PI / 2; pool.position.set(p.x, .035, p.z); pool.receiveShadow = true; world.add(pool);
         const ripple = new THREE.Mesh(new THREE.TorusGeometry(.48, .018, 5, 28), mat("#b8e5df", .25, { transparent: true, opacity: .55 }));
         ripple.rotation.x = Math.PI / 2; ripple.position.set(p.x, .06, p.z); ripple.userData.ripple = true; world.add(ripple);
       } else if (kind === "rubble") addRubble(world, col, row);
@@ -443,7 +445,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     const target = new THREE.Vector3(0, 0, 0);
     function resize() {
       const w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight), aspect = w / h, view = aspect < 1.15 ? 38 : 22.5;
-      camera.left = -view * aspect / 2; camera.right = view * aspect / 2; camera.top = view / 2; camera.bottom = -view / 2; camera.zoom = 1; camera.updateProjectionMatrix(); renderer.setSize(w, h);
+      camera.left = -view * aspect / 2; camera.right = view * aspect / 2; camera.top = view / 2; camera.bottom = -view / 2; camera.zoom = 1.14; camera.updateProjectionMatrix(); renderer.setSize(w, h);
     }
     const observer = new ResizeObserver(resize); observer.observe(host); resize();
     function pointerStart(e) { activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); renderer.domElement.setPointerCapture(e.pointerId); if (activePointers.size === 2) { const pts = [...activePointers.values()]; pinchStart = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y); pinchZoom = camera.zoom; down = null; moved = true; return; } down = { x: e.clientX, y: e.clientY, id: e.pointerId }; moved = false; }
