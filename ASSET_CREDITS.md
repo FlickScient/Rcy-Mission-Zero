@@ -4,7 +4,7 @@ Mission Zero loads selected 3D environment and vehicle models from the Tiny Game
 
 - **Original creator:** Kenney
 - **Source library:** https://github.com/Hidencod/tge-assets
-- **Asset packs used:** City Kit (Commercial), Car Kit
+- **Asset packs used:** City Kit (Commercial), City Kit (Suburban), Car Kit, Mini Characters
 - **License:** CC0 1.0 Universal (public domain dedication)
 - **Runtime asset host:** https://hidencod.github.io/tge-assets/
 
@@ -12,6 +12,8 @@ The source library identifies the listed Kenney models as CC0 1.0. These assets 
 
 The game currently loads these GLB files at runtime:
 - City Kit (Commercial): building-a through building-l
+- City Kit (Suburban): building-type-a through building-type-u
+- Mini Characters: selected male and female character models
 - Car Kit: firetruck, ambulance, sedan, suv, police, van
 
 If the external asset host is unavailable, the game falls back to the built-in procedural geometry for those scene elements.
