@@ -284,7 +284,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     const assetLoader = new GLTFLoader();
     assetLoader.setCrossOrigin("anonymous");
     const assetRoot = "https://hidencod.github.io/tge-assets/";
-    const cityBuildingSpecs=[
+    const loadCharacterVisual=(group,file,height,keep=[])=>{\n      assetLoader.load(assetRoot+"packs/mini-characters/"+file,gltf=>{\n        if(!host.isConnected){gltf.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();});return;}\n        const model=gltf.scene,box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());\n        const scale=height/Math.max(size.y,.001);\n        group.children.forEach(child=>{if(!keep.includes(child))child.visible=false;});\n        model.scale.setScalar(scale);model.position.set(-center.x*scale,-box.min.y*scale,-center.z*scale);\n        model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});\n        group.add(model);\n      },undefined,()=>{});\n    };\n    const cityBuildingSpecs=[
       {x:-25,z:-14,width:6.2,depth:5.2,floors:3,file:"building-a.glb"},
       {x:-15,z:-14,width:5.4,depth:5.4,floors:2,file:"building-b.glb"},
       {x:-25,z:0,width:6.4,depth:5.8,floors:4,file:"building-c.glb"},
@@ -394,9 +394,11 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     const unitNodes = new Map();
     for (const unit of liveRef.current.game.units) {
       const g = addVolunteer(world, unit); unitNodes.set(unit.id, g);
+      loadCharacterVisual(g,unit.id==="alpha"?"character-male-a.glb":unit.id==="bravo"?"character-female-a.glb":"character-male-b.glb",1.55,[g.userData.ring,g.userData.pack,g.userData.carried,g.userData.workRing,g.userData.workCross]);
     }
     // Controllable player character for free exploration.
     const player = new THREE.Group(); player.position.set(0, .04, -.5); world.add(player);
+    loadCharacterVisual(player,"character-male-c.glb",1.62);
     const bodyMat = mat("#315d91"), trimMat = mat("#e7c66e"), skinMat = mat("#bd8d6d");
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(.22, .42, 5, 9), bodyMat); body.position.y = .78; body.castShadow = true; player.add(body);
     const head = new THREE.Mesh(new THREE.SphereGeometry(.17, 14, 12), skinMat); head.position.y = 1.27; head.castShadow = true; player.add(head);
@@ -437,6 +439,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     ];
     const pedestrians=pedestrianRoutes.map((route,i)=>{
       const person=addPedestrian(world,i),start=route[0];person.position.set(start[0],.04,start[1]);
+      loadCharacterVisual(person,i%2===0?"character-female-b.glb":"character-male-d.glb",1.28,[person.userData.alert]);
       person.userData.route=route;person.userData.waypoint=1;person.userData.speed=1.05+(i%3)*.12;
       person.userData.phase=i*1.9;person.userData.homeX=start[0];person.userData.homeZ=start[1];
       person.userData.injured=i===3;
