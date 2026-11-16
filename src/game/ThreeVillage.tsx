@@ -284,7 +284,18 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     const assetLoader = new GLTFLoader();
     assetLoader.setCrossOrigin("anonymous");
     const assetRoot = "https://hidencod.github.io/tge-assets/";
-    const loadCharacterVisual=(group,file,height,keep=[])=>{\n      assetLoader.load(assetRoot+"packs/mini-characters/"+file,gltf=>{\n        if(!host.isConnected){gltf.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();});return;}\n        const model=gltf.scene,box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());\n        const scale=height/Math.max(size.y,.001);\n        group.children.forEach(child=>{if(!keep.includes(child))child.visible=false;});\n        model.scale.setScalar(scale);model.position.set(-center.x*scale,-box.min.y*scale,-center.z*scale);\n        model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});\n        group.add(model);\n      },undefined,()=>{});\n    };\n    const cityBuildingSpecs=[
+    const loadCharacterVisual=(group,file,height,keep=[])=>{
+      assetLoader.load(assetRoot+"packs/mini-characters/"+file,gltf=>{
+        if(!host.isConnected){gltf.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();});return;}
+        const model=gltf.scene,box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+        const scale=height/Math.max(size.y,.001);
+        group.children.forEach(child=>{if(!keep.includes(child))child.visible=false;});
+        model.scale.setScalar(scale);model.position.set(-center.x*scale,-box.min.y*scale,-center.z*scale);
+        model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+        group.add(model);
+      },undefined,()=>{});
+    };
+    const cityBuildingSpecs=[
       {x:-25,z:-14,width:6.2,depth:5.2,floors:3,file:"building-a.glb"},
       {x:-15,z:-14,width:5.4,depth:5.4,floors:2,file:"building-b.glb"},
       {x:-25,z:0,width:6.4,depth:5.8,floors:4,file:"building-c.glb"},
