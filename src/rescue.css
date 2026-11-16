@@ -250,3 +250,18 @@
  user-select:none!important;
  touch-action:none!important;
 }
+
+/* Compact field instructions remain visible without covering the world. */
+.player-control-hint{
+ display:block!important;z-index:6!important;bottom:12px!important;left:50%!important;
+ width:max-content;max-width:calc(100vw - 190px);transform:translateX(-50%)!important;
+ padding:7px 10px!important;border:1px solid #ffffff35!important;border-radius:999px!important;
+ background:#101b16d9!important;color:#f4f1e7!important;font:600 7px 'DM Mono',monospace!important;
+ letter-spacing:.04em!important;text-align:center;white-space:nowrap!important;
+}
+@media(max-width:760px){
+ .player-control-hint{bottom:7px!important;max-width:calc(100vw - 150px)!important;font-size:6px!important;padding:6px 7px!important}
+}
+@media(orientation:landscape) and (max-height:520px){
+ .player-control-hint{bottom:6px!important;font-size:6px!important;padding:5px 7px!important}
+}
