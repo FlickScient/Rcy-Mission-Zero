@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { COLS, ROWS, obstacles } from "./grid";
 
 const TILE = 2.15;
@@ -278,19 +279,56 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
       const road=new THREE.Mesh(new THREE.PlaneGeometry(5.2,48),asphalt);road.rotation.x=-Math.PI/2;road.position.set(x,.016,0);road.receiveShadow=true;world.add(road);
       for(let z=-22;z<23;z+=4.2)addBox(world,.075,.018,2.1,lane,x,.035,z,false);
     }
-    const cityBuildings=[
-      addCityBuilding(world,-25,-14,6.2,5.2,3,0),addCityBuilding(world,-15,-14,5.4,5.4,2,1),
-      addCityBuilding(world,-25,0,6.4,5.8,4,2),addCityBuilding(world,-15,14,6.2,5.2,3,3),
-      addCityBuilding(world,-25,14,5.5,5.4,2,1),addCityBuilding(world,15,-14,6.5,5.4,3,2),
-      addCityBuilding(world,25,-14,5.6,5.5,2,3),addCityBuilding(world,15,0,6.4,5.8,4,0),
-      addCityBuilding(world,25,0,5.4,5.4,3,1),addCityBuilding(world,15,14,6.2,5.2,3,3),
-      addCityBuilding(world,25,14,5.8,5.4,2,2),addCityBuilding(world,-5,-19,5.4,4.8,2,0)
+    // Real CC0 Kenney GLB assets replace the old box-built skyline and toy cars.
+    // The models are served from the public CC0 model library; lightweight local geometry remains as a fallback.
+    const assetLoader = new GLTFLoader();
+    assetLoader.setCrossOrigin("anonymous");
+    const assetRoot = "https://hidencod.github.io/tge-assets/";
+    const cityBuildingSpecs=[
+      {x:-25,z:-14,width:6.2,depth:5.2,floors:3,file:"building-a.glb"},
+      {x:-15,z:-14,width:5.4,depth:5.4,floors:2,file:"building-b.glb"},
+      {x:-25,z:0,width:6.4,depth:5.8,floors:4,file:"building-c.glb"},
+      {x:-15,z:14,width:6.2,depth:5.2,floors:3,file:"building-d.glb"},
+      {x:-25,z:14,width:5.5,depth:5.4,floors:2,file:"building-e.glb"},
+      {x:15,z:-14,width:6.5,depth:5.4,floors:3,file:"building-f.glb"},
+      {x:25,z:-14,width:5.6,depth:5.5,floors:2,file:"building-g.glb"},
+      {x:15,z:0,width:6.4,depth:5.8,floors:4,file:"building-h.glb"},
+      {x:25,z:0,width:5.4,depth:5.4,floors:3,file:"building-i.glb"},
+      {x:15,z:14,width:6.2,depth:5.2,floors:3,file:"building-j.glb"},
+      {x:25,z:14,width:5.8,depth:5.4,floors:2,file:"building-k.glb"},
+      {x:-5,z:-19,width:5.4,depth:4.8,floors:2,file:"building-l.glb"}
     ];
-    const cityCars=[
-      addCityCar(world,-20,-9,"#b7c4bf",Math.PI/2),addCityCar(world,20,-9,"#bd6d55",-Math.PI/2),
-      addCityCar(world,-20,9,"#d2b66f",Math.PI/2),addCityCar(world,20,9,"#7d9baf",-Math.PI/2),
-      addCityCar(world,-7,19,"#c5c8c1",0),addCityCar(world,7,-19,"#8c9a82",Math.PI)
+    const cityBuildings=cityBuildingSpecs.map(({x,z,width,depth})=>({x,z,width,depth}));
+    cityBuildingSpecs.forEach(spec=>{
+      assetLoader.load(assetRoot+"packs/city-kit-commercial/"+spec.file,gltf=>{
+        if(!host.isConnected){gltf.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();});return;}
+        const model=gltf.scene,box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+        const sx=spec.width/Math.max(size.x,.001),sy=(spec.floors*1.65)/Math.max(size.y,.001),sz=spec.depth/Math.max(size.z,.001);
+        const wrapper=new THREE.Group();wrapper.position.set(spec.x,0,spec.z);
+        model.scale.set(sx,sy,sz);model.position.set(-center.x*sx,-box.min.y*sy,-center.z*sz);
+        model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>{m.roughness=Math.max(m.roughness??.8,.58);});}}});
+        wrapper.add(model);world.add(wrapper);
+      },undefined,()=>{if(host.isConnected)addCityBuilding(world,spec.x,spec.z,spec.width,spec.depth,spec.floors,cityBuildingSpecs.indexOf(spec)%4);});
+    });
+    const cityCarSpecs=[
+      {x:-20,z:-9,file:"firetruck.glb",rotation:Math.PI/2},
+      {x:20,z:-9,file:"ambulance.glb",rotation:-Math.PI/2},
+      {x:-20,z:9,file:"sedan.glb",rotation:Math.PI/2},
+      {x:20,z:9,file:"suv.glb",rotation:-Math.PI/2},
+      {x:-7,z:19,file:"police.glb",rotation:0},
+      {x:7,z:-19,file:"van.glb",rotation:Math.PI}
     ];
+    const cityCars=cityCarSpecs.map(spec=>({position:new THREE.Vector3(spec.x,.08,spec.z)}));
+    cityCarSpecs.forEach(spec=>{
+      assetLoader.load(assetRoot+"packs/car-kit/"+spec.file,gltf=>{
+        if(!host.isConnected){gltf.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();});return;}
+        const model=gltf.scene,box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+        const scale=2.05/Math.max(size.z,.001);model.scale.setScalar(scale);
+        model.position.set(-center.x*scale,-box.min.y*scale,-center.z*scale);
+        const wrapper=new THREE.Group();wrapper.position.set(spec.x,.08,spec.z);wrapper.rotation.y=spec.rotation;
+        model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});wrapper.add(model);world.add(wrapper);
+      },undefined,()=>{if(host.isConnected)addCityCar(world,spec.x,spec.z,"#b7c4bf",spec.rotation);});
+    });
     for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
       const p = point(col, row), kind = obstacleMap.get(col + "," + row);
       // The playable block is one continuous terrain surface, not a checkerboard of raised square tiles.
