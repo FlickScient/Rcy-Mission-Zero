@@ -649,7 +649,7 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
   const hold=(e,x,z)=>{e.preventDefault();e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);setDirection(x,z);};
   const release=(e)=>{if(e){e.preventDefault?.();e.stopPropagation?.();}setDirection(0,0);};
   const stopLongPress=(e)=>{e.preventDefault();e.stopPropagation();};
-  return <div ref={hostRef} className="three-village-host" aria-label="Interactive 3D rescue village. Move with WASD, arrow keys or touch controls. Drag to pan and pinch or scroll to zoom.">
+  return <div ref={hostRef} className="three-village-host" onContextMenu={stopLongPress} aria-label="Interactive 3D rescue village. Move with WASD, arrow keys or touch controls. Drag to pan and pinch or scroll to zoom.">
     <div className="player-control-pad" onContextMenu={stopLongPress} onPointerDown={e=>e.stopPropagation()} onPointerMove={e=>e.stopPropagation()} onPointerUp={e=>e.stopPropagation()}>
       <button aria-label="Move forward" onContextMenu={stopLongPress} onPointerDown={e=>hold(e,0,-1)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▲</button>
       <div><button aria-label="Move left" onContextMenu={stopLongPress} onPointerDown={e=>hold(e,-1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>◀</button><button aria-label="Move backward" onContextMenu={stopLongPress} onPointerDown={e=>hold(e,0,1)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▼</button><button aria-label="Move right" onContextMenu={stopLongPress} onPointerDown={e=>hold(e,1,0)} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>▶</button></div>
