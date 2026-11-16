@@ -695,6 +695,6 @@ export default function ThreeVillage({ game, sites, onUnitSelect, onSiteSelect }
     <button className="player-sprint" aria-label="Hold to sprint" onContextMenu={stopLongPress} onPointerDown={e=>{e.preventDefault();e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);controlsRef.current.sprint=true;}} onPointerUp={e=>{e.preventDefault();controlsRef.current.sprint=false;}} onPointerCancel={()=>{controlsRef.current.sprint=false;}} onLostPointerCapture={()=>{controlsRef.current.sprint=false;}}>SPRINT</button>
     <div className="civilian-status" ref={civilianStatusRef}>CIVILIANS  ·  8 in area</div>
     <div className="civilian-interaction" onContextMenu={stopLongPress} onPointerDown={e=>e.stopPropagation()}><span>{interactionMessage}</span><button onContextMenu={stopLongPress} onClick={()=>actionRef.current()}>HELP NEARBY · E</button></div>
-    <div className="player-control-hint">WASD / ARROWS · MOVE · SHIFT / SPRINT</div>
+    <div className="player-control-hint">MOVE · TAP VOLUNTEER → RED INCIDENT · WALK TO CIVILIAN + HELP</div>
   </div>;
 }
