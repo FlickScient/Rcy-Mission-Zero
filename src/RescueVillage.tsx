@@ -29,7 +29,7 @@ export default function RescueVillage({onBack,user,api,onProgress}){
     setSeconds(current => Math.max(0, current - 1));
     const finished = [];
     const treating = [];
-    const extraction = { col: 5, row: 4 };
+    const extraction = { col: 5, row: 7 };
     const nextUnits = unitsState.map(unit => {
       if (!unit.task) return unit;
       if (unit.phase === "treating") {
